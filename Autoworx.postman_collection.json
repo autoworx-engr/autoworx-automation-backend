@@ -1,0 +1,342 @@
+{
+	"info": {
+		"_postman_id": "bb4abd16-8a89-4f53-99d9-e3f304b5cf11",
+		"name": "Autoworx",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "38074581"
+	},
+	"item": [
+		{
+			"name": "Pipeline Automation Rules",
+			"item": [
+				{
+					"name": "Create Pipeline Rule",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Move to next stage after 2 days\",\n  \"stageIds\": [1, 2],\n  \"conditionType\": \"TIME_DELAY\",\n  \"actionType\": \"MOVE_TO_STAGE\",\n  \"targetColumnId\": 3,\n  \"timeDelay\": 2,\n  \"timeUnit\": \"DAYS\",\n  \"companyId\": 1,\n  \"createdBy\": \"user123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/pipeline-automation-rules",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pipeline-automation-rules"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Pipeline Rules",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/pipeline-automation-rules?companyId=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pipeline-automation-rules"
+							],
+							"query": [
+								{
+									"key": "companyId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Pipeline Rule by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/pipeline-automation-rules/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pipeline-automation-rules",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Pipeline Rule",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated rule title\",\n  \"stageIds\": [2, 3],\n  \"isPaused\": true,\n  \"timeDelay\": 3\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/pipeline-automation-rules/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pipeline-automation-rules",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Pipeline Rule",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/pipeline-automation-rules/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pipeline-automation-rules",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Marketing  Automation Rules",
+			"item": [
+				{
+					"name": "Create Marketing Rule (Email)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"companyId\": 1,\n    \"target\": \"ALL_CLIENTS\",\n    \"targetCondition\": [\n        \"ALL_CLIENTS_THIS_MONTH\",\n        \"ALL_CLIENTS_THIS_YEAR\"\n    ],\n    \"date\": \"2025-06-15T09:00:00Z\",\n    \"startTime\": \"2025-06-15T09:00:00Z\",\n    \"endTime\": \"2025-06-15T17:00:00Z\",\n    \"isAppointmentCreated\": false,\n    \"vehicleMinYear\": \"2010\",\n    \"vehicleMaxYear\": \"2023\",\n    \"vehicleBrand\": \"Toyota\",\n    \"vehicleModel\": \"Camry\",\n    \"communicationType\": \"EMAIL\",\n    \"emailSubject\": \"Spring Service Special - 20% Off!\",\n    \"emailBody\": \"Dear valued customer, we are offering a special spring discount on all maintenance services. Book now to take advantage of this limited-time offer!\",\n    \"createdBy\": \"user123\",\n    \"attachments\": [\n        \"https://storage.example.com/brochures/summer-special-2025.pdf\",\n        \"https://storage.example.com/images/coupon-code.png\"\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/marketing-automation-rules",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"marketing-automation-rules"
+							]
+						},
+						"description": "Creates a new email marketing automation rule"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Marketing Rule (BOTH)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"companyId\": 1,\n    \"target\": \"ALL_CLIENTS\",\n    \"targetCondition\": [\n        \"ALL_CLIENTS_THIS_MONTH\",\n        \"ALL_CLIENTS_THIS_YEAR\"\n    ],\n    \"date\": \"2025-06-15T09:00:00Z\",\n    \"startTime\": \"2025-06-15T09:00:00Z\",\n    \"endTime\": \"2025-06-15T17:00:00Z\",\n    \"isAppointmentCreated\": false,\n    \"vehicleMinYear\": \"2010\",\n    \"vehicleMaxYear\": \"2023\",\n    \"vehicleBrand\": \"Toyota\",\n    \"vehicleModel\": \"Camry\",\n    \"communicationType\": \"EMAIL\",\n    \"emailSubject\": \"Spring Service Special - 20% Off!\",\n    \"emailBody\": \"Dear valued customer, we are offering a special spring discount on all maintenance services. Book now to take advantage of this limited-time offer!\",\n    \"createdBy\": \"user123\",\n    \"attachments\": [\n        \"https://storage.example.com/brochures/summer-special-2025.pdf\",\n        \"https://storage.example.com/images/coupon-code.png\"\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/marketing-automation-rules",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"marketing-automation-rules"
+							]
+						},
+						"description": "Creates a new email marketing automation rule"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Marketing Rule (SMS)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"companyId\": 1,\n    \"target\": \"ALL_CLIENTS\",\n    \"targetCondition\": [\n        \"ALL_CLIENTS_THIS_MONTH\",\n        \"ALL_CLIENTS_THIS_YEAR\"\n    ],\n    \"date\": \"2025-06-15T09:00:00Z\",\n    \"startTime\": \"2025-07-01T10:00:00Z\",\n    \"endTime\": \"2025-07-01T16:00:00Z\",\n    \"isAppointmentCreated\": true,\n    \"vehicleMinYear\": \"2015\",\n    \"vehicleMaxYear\": \"2025\",\n    \"communicationType\": \"SMS\",\n    \"smsBody\": \"20% off Spring Service Special at AutoWorx! Book now: example.com/book\",\n    \"createdBy\": \"user456\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/marketing-automation-rules",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"marketing-automation-rules"
+							]
+						},
+						"description": "Creates a new SMS marketing automation rule"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Marketing Rules",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/marketing-automation-rules?companyId=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"marketing-automation-rules"
+							],
+							"query": [
+								{
+									"key": "companyId",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Retrieves all marketing automation rules for a specific company"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Marketing Rule by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/marketing-automation-rules/12",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"marketing-automation-rules",
+								"12"
+							]
+						},
+						"description": "Retrieves a specific marketing automation rule by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Marketing Rule",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"companyId\": 1,\n    \"target\": \"ALL_CLIENTS\",\n    \"targetCondition\": [\n        \"ALL_CLIENTS_THIS_MONTH\",\n        \"ALL_CLIENTS_THIS_YEAR\"\n    ],\n    \"date\": \"2025-06-15T09:00:00Z\",\n    \"startTime\": \"2025-06-15T09:00:00Z\",\n    \"endTime\": \"2025-06-15T17:00:00Z\",\n    \"isAppointmentCreated\": false,\n    \"vehicleMinYear\": \"2010\",\n    \"vehicleMaxYear\": \"2023\",\n    \"vehicleBrand\": \"Toyota\",\n    \"vehicleModel\": \"Camry\",\n    \"communicationType\": \"EMAIL\",\n    \"emailSubject\": \"Spring Service Special - 20% Off!\",\n    \"emailBody\": \"Dear valued customer, we are offering a special spring discount on all maintenance services. Book now to take advantage of this limited-time offer!\",\n    \"createdBy\": \"user123\",\n    \"attachments\": [\n        \"https://storage.example.com/brochures/summer-special-2025.pdf\",\n        \"https://storage.example.com/images/coupon-code.png\"\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/marketing-automation-rules/12",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"marketing-automation-rules",
+								"12"
+							]
+						},
+						"description": "Updates an existing marketing automation rule"
+					},
+					"response": []
+				},
+				{
+					"name": "Toggle Rule Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"isPaused\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/marketing-automation-rules/12",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"marketing-automation-rules",
+								"12"
+							]
+						},
+						"description": "Toggles the paused status of a marketing automation rule"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Marketing Rule",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/marketing-automation-rules/12",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"marketing-automation-rules",
+								"12"
+							]
+						},
+						"description": "Deletes a marketing automation rule"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000/api"
+		}
+	]
+}

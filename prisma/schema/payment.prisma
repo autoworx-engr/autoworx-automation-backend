@@ -1,0 +1,166 @@
+// Payment of a invoice.
+// One invoice can have one payment. And one payment can't be in multiple invoices.
+// Payment can be of type card, check, cash or other.
+// If payment type is other, then it can have a payment method.
+// If payment type is card, then it can have a card type.
+model Payment {
+  id              Int             @id @default(autoincrement())
+  date            DateTime?
+  notes           String?
+  amount          Decimal? // Original payment amount
+  refundedAmount  Decimal?        @default(0) @map("refunded_amount")
+  refundMethod    PaymentType?    @map("refund_method")
+  refundReason    String?         @map("refund_reason")
+  type            PaymentType
+  card            CardPayment?
+  check           CheckPayment?
+  cash            CashPayment?
+  other           OtherPayment?
+  deposit         DepositPayment?
+  invoiceId       String?         @map("invoice_id")
+  companyId       Int             @map("company_id")
+  refundCreatedAt DateTime?       @map("refund_created_at")
+  refundUpdatedAt DateTime?       @map("refund_updated_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @default(now()) @updatedAt @map("updated_at")
+  invoice         Invoice?        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  Company         Company?        @relation(fields: [companyId], references: [id])
+  stripePayment   StripePayment?
+  Refund          Refund[]
+
+  @@index([companyId])
+  @@index([invoiceId])
+  @@index([date])
+  @@index([amount])
+}
+
+model Refund {
+  id         Int         @id @default(autoincrement())
+  amount     Decimal     @db.Decimal(8, 2)
+  reason     String?
+  method     PaymentType // How the refund was processed (CASH, CARD, etc.)
+  refundDate DateTime    @default(now()) @map("refund_date")
+  notes      String?
+
+  // Foreign keys
+  paymentId   Int    @map("payment_id")
+  invoiceId   String @map("invoice_id")
+  companyId   Int    @map("company_id")
+  processedBy Int?   @map("processed_by") // User who processed the refund
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [processedBy], references: [id], onDelete: SetNull)
+
+  @@map("refunds")
+}
+
+model CardPayment {
+  id         Int      @id @default(autoincrement())
+  paymentId  Int      @unique
+  creditCard String?
+  cardType   CardType
+  payment    Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+}
+
+model CheckPayment {
+  id          Int     @id @default(autoincrement())
+  paymentId   Int     @unique
+  checkNumber String?
+  payment     Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+}
+
+model CashPayment {
+  id           Int     @id @default(autoincrement())
+  paymentId    Int     @unique
+  receivedCash String?
+  payment      Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+}
+
+model OtherPayment {
+  id              Int            @id @default(autoincrement())
+  paymentId       Int            @unique
+  paymentMethodId Int?
+  payment         Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: Cascade)
+}
+
+model DepositPayment {
+  id            Int     @id @default(autoincrement())
+  paymentId     Int     @unique
+  depositMethod String?
+  depositNotes  String?
+  payment       Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+}
+
+model StripePayment {
+  id                    Int      @id @default(autoincrement())
+  stripePaymentIntentId String   @unique @map("stripe_payment_intent_id")
+  paymentId             Int      @unique @map("payment_id")
+  payment               Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoiceId             String?  @map("invoice_id")
+  invoice               Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  companyId             Int      @map("company_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
+  company               Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model PaymentMethod {
+  id        Int            @id @default(autoincrement())
+  name      String
+  companyId Int            @map("company_id")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @default(now()) @updatedAt @map("updated_at")
+  payments  OtherPayment[]
+  company   Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+enum PaymentType {
+  CARD
+  CHECK
+  CASH
+  OTHER
+  DEPOSIT
+}
+
+enum CardType {
+  MASTERCARD
+  VISA
+  AMEX
+  OTHER
+}
+
+model Coupon {
+  id           Int            @id @default(autoincrement())
+  name         String
+  code         String
+  type         String
+  startDate    DateTime
+  endDate      DateTime
+  discount     Decimal
+  discountType DiscountType
+  status       CouponStatus
+  redemptions  Int
+  companyId    Int            @map("company_id")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @default(now()) @updatedAt @map("updated_at")
+  company      Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  ClientCoupon ClientCoupon[]
+}
+
+enum CouponStatus {
+  Active
+  Expired
+}
+
+enum DiscountType {
+  Percentage
+  Fixed
+}
