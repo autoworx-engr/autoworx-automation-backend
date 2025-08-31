@@ -17,10 +17,6 @@ import {
 } from './interfaces/models.interface';
 import { YearsQueryParams, YearsResponse } from './interfaces/years.interface';
 
-interface AuthResponse {
-  token: string;
-}
-
 @Injectable()
 export class CarApiService {
   private readonly logger = new Logger(CarApiService.name);
