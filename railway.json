@@ -1,0 +1,22 @@
+{
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm run build"
+  },
+  "deploy": {
+    "startCommand": "npm run start:prod",
+    "healthcheckPath": "/",
+    "healthcheckTimeout": 60,
+    "restartPolicyType": "ON_FAILURE"
+  },
+  "nixpacks": {
+    "node": {
+      "version": "16.x",
+      "features": {
+        "nodejs": {
+          "nodeOptions": "--experimental-specifier-resolution=node"
+        }
+      }
+    }
+  }
+}
