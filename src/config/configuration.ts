@@ -1,7 +1,7 @@
 export default () => ({
   port: parseInt(process.env.PORT || '8000', 10),
   database_url: {
-    url: process.env.DATABASE_URL,
+    url: process.env.DB_CONNECTION_STRING,
   },
   mailgun: {
     username: process.env.MAILGUN_USERNAME || '',
