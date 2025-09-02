@@ -312,7 +312,7 @@ model MailgunEmail {
   id Int @id @default(autoincrement())
 
   subject     String
-  text        String                   @db.LongText
+  text        String                   @db.Text
   attachments MailgunEmailAttachment[]
   emailBy     EMAIL_BY
 
