@@ -24,7 +24,6 @@ import { AuthModule } from './modules/auth/auth.module';
 
 import { ReminderModule } from './modules/appointment-reminder-module/reminder.module';
 import { NotificationModule } from './modules/notification/notification.module';
-import { HealthController } from './health/health.controller';
 @Global()
 @Module({
   imports: [
@@ -81,7 +80,7 @@ import { HealthController } from './health/health.controller';
     ReminderModule,
     NotificationModule,
   ],
-  controllers: [HealthController],
+  controllers: [],
   providers: [],
   exports: [CacheModule],
 })
