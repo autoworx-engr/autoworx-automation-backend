@@ -10,7 +10,7 @@
     "npm": ">=8.0.0"
   },
   "prisma": {
-    "schema": "prisma/schema",
+    "schema": "prisma/schema.prisma",
     "seed": "ts-node prisma/seed.ts"
   },
   "scripts": {
