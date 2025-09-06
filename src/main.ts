@@ -38,9 +38,8 @@ async function bootstrap() {
   // cors policy
   app.enableCors({
     origin:
-      process.env.NODE_ENV === 'development'
-        ? true // Allow all origins in development
-        : (origin: string, callback) => {
+      // Allow all origins in development
+         (origin: string, callback) => {
             const allowedOrigins = (
               process.env.ACCESS_CORS_ORIGINS || ''
             ).split(',');
