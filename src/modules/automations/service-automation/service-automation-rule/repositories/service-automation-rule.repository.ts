@@ -30,6 +30,17 @@ export class ServiceAutomationRuleRepository {
         companyId,
         ...params,
       },
+      include: {
+        serviceMaintenanceStage: {
+          include: {
+            service: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
     });
   }
 

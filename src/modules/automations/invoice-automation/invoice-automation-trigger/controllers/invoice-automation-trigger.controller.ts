@@ -1,9 +1,17 @@
-import { Body, Controller, Patch } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Patch, UseGuards } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UpdateInvoiceAutomationTriggerDto } from '../dto/update-invoice-automation-trigger.dto';
 import { InvoiceAutomationTriggerService } from '../services/invoice-automation-trigger.service';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 
 @ApiTags('invoice-automation-trigger')
+@ApiBearerAuth('JWT-auth')
+@UseGuards(JwtAuthGuard)
 @Controller('invoice-automation-trigger')
 export class InvoiceAutomationTriggerController {
   constructor(

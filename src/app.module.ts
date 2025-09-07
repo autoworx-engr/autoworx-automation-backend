@@ -7,7 +7,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CacheableMemory } from 'cacheable';
 import { Keyv } from 'keyv';
-import configuration from './config/configuration';
+import configuration from 'src/config/configuration';
 import { CarApiModule } from './external/car-api/car-api.module';
 import { CommunicationAutomationModule } from './modules/automations/communication-automation/communication-automation-rule/communication-automation.module';
 import { CommunicationAutomationTriggerModule } from './modules/automations/communication-automation/communication-automation-trigger/communication-automation-trigger.module';
