@@ -38,6 +38,11 @@ async function bootstrap() {
   // cors policy
   app.enableCors({
     origin: (origin: string, callback) => {
+      console.log('Raw CORS env var:', process.env.ACCESS_CORS_ORIGINS);
+      console.log(
+        'All env vars containing CORS:',
+        Object.keys(process.env).filter((key) => key.includes('CORS')),
+      );
       const allowedOrigins = (process.env.ACCESS_CORS_ORIGINS || '')
         .split(',')
         .map((o) => o.trim());
