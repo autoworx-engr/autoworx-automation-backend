@@ -1,0 +1,5 @@
+### HTTP request 
+GET http://localhost:8000/
+
+### Get service automation rules
+GET http://localhost:8000/service-automation-rules

@@ -1,0 +1,10 @@
+import { IsNumber } from 'class-validator';
+
+export class CreatePipelineAutomationTriggerDto {
+  @IsNumber({}, { message: 'companyId must be a number' })
+  companyId: number;
+  @IsNumber({}, { message: 'leadId must be a number' })
+  leadId: number;
+  @IsNumber({}, { message: 'pipelineId must be a number' })
+  columnId: number;
+}

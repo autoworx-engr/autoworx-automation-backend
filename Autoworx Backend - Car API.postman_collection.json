@@ -1,0 +1,314 @@
+{
+	"info": {
+		"_postman_id": "53d4c094-3f29-4efa-8300-901a64ff9c07",
+		"name": "Autoworx Backend - Car API",
+		"description": "Collection for testing the Autoworx Car API endpoints that proxy CarAPI.app services.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "38074581"
+	},
+	"item": [
+		{
+			"name": "Makes",
+			"item": [
+				{
+					"name": "Get Car Makes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/cars/makes",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"makes"
+							]
+						},
+						"description": "Get a list of car makes without any filters"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for retrieving car make information"
+		},
+		{
+			"name": "Models",
+			"item": [
+				{
+					"name": "Get All Models",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/cars/models",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"models"
+							]
+						},
+						"description": "Get all car models without filters"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Models by Year and Make",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/cars/models?year=2020&make=Toyota",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"models"
+							],
+							"query": [
+								{
+									"key": "year",
+									"value": "2020"
+								},
+								{
+									"key": "make",
+									"value": "Toyota"
+								}
+							]
+						},
+						"description": "Get car models filtered by year and make"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Models with Make ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/cars/models?make_id=123",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"models"
+							],
+							"query": [
+								{
+									"key": "make_id",
+									"value": "123"
+								}
+							]
+						},
+						"description": "Get car models filtered by make_id"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Models with Verbose",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/cars/models?verbose=yes&year=2020&make=Honda",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"models"
+							],
+							"query": [
+								{
+									"key": "verbose",
+									"value": "yes"
+								},
+								{
+									"key": "year",
+									"value": "2020"
+								},
+								{
+									"key": "make",
+									"value": "Honda"
+								}
+							]
+						},
+						"description": "Get car models with verbose output (includes make details)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Models with Complex Query (JSON)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/cars/models?json=%5B%7B%22field%22%3A%20%22make%22%2C%20%22op%22%3A%20%22in%22%2C%20%22val%22%3A%20%5B%22Ford%22%2C%20%22Acura%22%5D%7D%2C%20%7B%22field%22%3A%20%22year%22%2C%20%22op%22%3A%20%22%3E%3D%22%2C%20%22val%22%3A%202010%7D%5D",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"models"
+							],
+							"query": [
+								{
+									"key": "json",
+									"value": "%5B%7B%22field%22%3A%20%22make%22%2C%20%22op%22%3A%20%22in%22%2C%20%22val%22%3A%20%5B%22Ford%22%2C%20%22Acura%22%5D%7D%2C%20%7B%22field%22%3A%20%22year%22%2C%20%22op%22%3A%20%22%3E%3D%22%2C%20%22val%22%3A%202010%7D%5D"
+								}
+							]
+						},
+						"description": "Get car models with a complex JSON query (URL-encoded):\n\n```json\n[{\"field\": \"make\", \"op\": \"in\", \"val\": [\"Ford\", \"Acura\"]}, {\"field\": \"year\", \"op\": \">=\", \"val\": 2010}]\n```"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for retrieving car model information"
+		},
+		{
+			"name": "Years",
+			"item": [
+				{
+					"name": "Get All Years",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/cars/years",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"years"
+							]
+						},
+						"description": "Get all available car years"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Years by Make",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/cars/years?make=Tesla",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"years"
+							],
+							"query": [
+								{
+									"key": "make",
+									"value": "Tesla"
+								}
+							]
+						},
+						"description": "Get years filtered by car make (Tesla)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Years by Make and Model",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/cars/years?make=Honda&model=Civic",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"years"
+							],
+							"query": [
+								{
+									"key": "make",
+									"value": "Honda"
+								},
+								{
+									"key": "model",
+									"value": "Civic"
+								}
+							]
+						},
+						"description": "Get years filtered by make and model (Honda Civic)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Years with Complex Query (JSON)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/cars/years?json=%5B%7B%22field%22%3A%20%22make%22%2C%20%22op%22%3A%20%22in%22%2C%20%22val%22%3A%20%5B%22Scion%22%2C%20%22Tesla%22%5D%7D%5D",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"years"
+							],
+							"query": [
+								{
+									"key": "json",
+									"value": "%5B%7B%22field%22%3A%20%22make%22%2C%20%22op%22%3A%20%22in%22%2C%20%22val%22%3A%20%5B%22Scion%22%2C%20%22Tesla%22%5D%7D%5D"
+								}
+							]
+						},
+						"description": "Get years with a complex JSON query (URL-encoded):\n\n```json\n[{\"field\": \"make\", \"op\": \"in\", \"val\": [\"Scion\", \"Tesla\"]}]\n```"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for retrieving available car years"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}
