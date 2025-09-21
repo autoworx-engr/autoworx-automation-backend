@@ -17,14 +17,42 @@ async function bootstrap() {
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath('/admin/queues');
 
-  const reminderQueue = app.get<Queue>(getQueueToken('reminder-queue'));
+  try {
+    const queueNames = [
+      'reminder-queue',
+      'time-delay-queue',
+      'pipeline-automation-queue',
+      'communication-automation-queue',
+      'marketing-automation-queue',
+      'service-automation-queue',
+      'inventory-automation-queue',
+    ];
 
-  createBullBoard({
-    queues: [new BullAdapter(reminderQueue)],
-    serverAdapter,
-  });
+    const queues: BullAdapter[] = [];
 
-  app.use('/admin/queues', serverAdapter.getRouter());
+    for (const queueName of queueNames) {
+      try {
+        const queue = app.get<Queue>(getQueueToken(queueName));
+        if (queue) {
+          queues.push(new BullAdapter(queue));
+          console.log(`✅ Added ${queueName} to Bull Board`);
+        }
+      } catch (error) {
+        console.log(`⚠️  Queue ${queueName} not found, skipping...`, error);
+      }
+    }
+
+    if (queues.length > 0) {
+      createBullBoard({
+        queues,
+        serverAdapter,
+      });
+      app.use('/admin/queues', serverAdapter.getRouter());
+      console.log(`🎯 Bull Board configured with ${queues.length} queues`);
+    }
+  } catch (error) {
+    console.error('Error setting up Bull Board:', error);
+  }
 
   // Enable validation pipes
   app.useGlobalPipes(new ValidationPipe());
