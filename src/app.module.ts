@@ -54,11 +54,10 @@ import { NotificationModule } from './modules/notification/notification.module';
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const redisUrl = new URL(configService.get<string>('REDIS_URL')!);
-
-        const host = redisUrl.hostname;
-        const port = Number(redisUrl.port);
-        const password = redisUrl.password;
+        // Use individual Redis config values instead of a URL
+        const host = configService.get('redis.host') || 'localhost';
+        const port = configService.get('redis.port') || 6379;
+        const password = configService.get('redis.password');
 
         return {
           connection: {
