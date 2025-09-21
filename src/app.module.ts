@@ -54,24 +54,21 @@ import { NotificationModule } from './modules/notification/notification.module';
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const redisUrl = new URL(
-          configService.get<string>('REDIS_URL')! + '?family=6',
-        );
+        const redisUrl = new URL(configService.get<string>('REDIS_URL')!);
 
         const host = redisUrl.hostname;
         const port = Number(redisUrl.port);
         const password = redisUrl.password;
-        const useTls = redisUrl.protocol === 'rediss:';
 
         return {
           connection: {
             host,
             port,
             password,
-            family: 6,
-            tls: useTls ? { servername: host } : undefined,
-            enableReadyCheck: true,
+            family: 0,
+            enableReadyCheck: false,
             maxRetriesPerRequest: null,
+            connectTimeout: 10000,
           },
           defaultJobOptions: {
             attempts: 3,
