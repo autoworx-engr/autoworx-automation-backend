@@ -69,7 +69,7 @@ import { NotificationModule } from './modules/notification/notification.module';
         const password = configService.get<string>('redis.password');
         const username =
           configService.get<string>('redis.username') || 'default';
-        const tls = !!configService.get<boolean>('redis.tls');
+        const tls = {};
 
         return {
           connection: {
@@ -79,9 +79,9 @@ import { NotificationModule } from './modules/notification/notification.module';
             username,
             family: 0,
             enableReadyCheck: false,
-            maxRetriesPerRequest: null,
+            maxRetriesPerRequest: 20,
             connectTimeout: 10000,
-            ...(tls ? { tls: {} } : {}), // enable TLS when requested
+            ...(tls ? { tls: {} } : {}),
           },
           defaultJobOptions: {
             attempts: 3,
