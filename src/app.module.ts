@@ -37,37 +37,51 @@ import { NotificationModule } from './modules/notification/notification.module';
     CacheModule.registerAsync({
       isGlobal: true,
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        stores: [
-          new Keyv({
-            store: new CacheableMemory({ ttl: 3600000, lruSize: 5000 }),
-          }),
-          createKeyv(
-            `redis://${configService.get('redis.host')}:${configService.get('redis.port')}`,
-            {
+      useFactory: (configService: ConfigService) => {
+        const host = configService.get<string>('redis.host');
+        const port = configService.get<number>('redis.port');
+        const password = configService.get<string>('redis.password');
+        const username =
+          configService.get<string>('redis.username') || 'default';
+        const tls = !!configService.get<boolean>('redis.tls');
+
+        const protocol = tls ? 'rediss' : 'redis';
+        const auth = password ? `${username}:${password}@` : '';
+        const redisUrl = `${protocol}://${auth}${host}:${port}`;
+
+        return {
+          stores: [
+            new Keyv({
+              store: new CacheableMemory({ ttl: 3600000, lruSize: 5000 }),
+            }),
+            createKeyv(redisUrl, {
               namespace: configService.get('redis.prefix') || 'autoworx:',
-            },
-          ),
-        ],
-      }),
+            }),
+          ],
+        };
+      },
     }),
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        // Use individual Redis config values instead of a URL
-        const host = configService.get('redis.host');
-        const port = configService.get('redis.port');
-        const password = configService.get('redis.password');
+        const host = configService.get<string>('redis.host');
+        const port = configService.get<number>('redis.port');
+        const password = configService.get<string>('redis.password');
+        const username =
+          configService.get<string>('redis.username') || 'default';
+        const tls = !!configService.get<boolean>('redis.tls');
 
         return {
           connection: {
             host,
             port,
             password,
+            username,
             family: 0,
             enableReadyCheck: false,
             maxRetriesPerRequest: null,
             connectTimeout: 10000,
+            ...(tls ? { tls: {} } : {}), // enable TLS when requested
           },
           defaultJobOptions: {
             attempts: 3,
