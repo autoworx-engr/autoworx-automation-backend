@@ -38,13 +38,17 @@ import { NotificationModule } from './modules/notification/notification.module';
       isGlobal: true,
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const host = configService.get<string>('redis.host');
-        const port = configService.get<number>('redis.port');
-        const password = configService.get<string>('redis.password');
-        const username =
-          configService.get<string>('redis.username') || 'default';
-        const tls = !!configService.get<boolean>('redis.tls');
+        const redisConfig = configService.get('redis');
+        const {
+          host,
+          port,
+          password,
+          username = 'default',
+          tls,
+          prefix,
+        } = redisConfig;
 
+        // Build Redis URL
         const protocol = tls ? 'rediss' : 'redis';
         const auth = password ? `${username}:${password}@` : '';
         const redisUrl = `${protocol}://${auth}${host}:${port}`;
@@ -54,9 +58,7 @@ import { NotificationModule } from './modules/notification/notification.module';
             new Keyv({
               store: new CacheableMemory({ ttl: 3600000, lruSize: 5000 }),
             }),
-            createKeyv(redisUrl, {
-              namespace: configService.get('redis.prefix') || 'autoworx:',
-            }),
+            createKeyv(redisUrl, { namespace: prefix || 'autoworx:' }),
           ],
         };
       },
@@ -67,26 +69,36 @@ import { NotificationModule } from './modules/notification/notification.module';
         const host = configService.get<string>('redis.host');
         const port = configService.get<number>('redis.port');
         const password = configService.get<string>('redis.password');
-        const username =
-          configService.get<string>('redis.username') || 'default';
-        const tls = {};
+        const tls = configService.get<boolean>('redis.tls');
+
+        const connectionConfig: any = {
+          host,
+          port,
+          family: 0,
+          enableReadyCheck: false,
+          maxRetriesPerRequest: 20,
+          connectTimeout: 10000,
+        };
+
+        // Add password if exists
+        if (password) {
+          connectionConfig.password = password;
+        }
+
+        // Add username and TLS only for Upstash (when TLS is true)
+        if (tls) {
+          connectionConfig.username =
+            configService.get<string>('redis.username') || 'default';
+          connectionConfig.tls = {};
+        }
 
         return {
-          connection: {
-            host,
-            port,
-            password,
-            username,
-            family: 0,
-            enableReadyCheck: false,
-            maxRetriesPerRequest: 20,
-            connectTimeout: 10000,
-            ...(tls ? { tls: {} } : {}),
-          },
+          connection: connectionConfig,
           defaultJobOptions: {
             attempts: 3,
             backoff: { type: 'exponential', delay: 1000 },
-            removeOnComplete: true,
+            removeOnComplete: 10,
+            removeOnFail: 50,
           },
         };
       },
