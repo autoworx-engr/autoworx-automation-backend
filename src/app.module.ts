@@ -55,8 +55,8 @@ import { NotificationModule } from './modules/notification/notification.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         // Use individual Redis config values instead of a URL
-        const host = configService.get('redis.host') || 'localhost';
-        const port = configService.get('redis.port') || 6379;
+        const host = configService.get('redis.host');
+        const port = configService.get('redis.port');
         const password = configService.get('redis.password');
 
         return {
