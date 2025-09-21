@@ -57,6 +57,7 @@ import { NotificationModule } from './modules/notification/notification.module';
         redis: {
           host: configService.get('redis.host'),
           port: configService.get('redis.port'),
+          password: configService.get('redis.password'),
           maxRetriesPerRequest: null,
           enableReadyCheck: false,
           connectTimeout: 10000,
