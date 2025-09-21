@@ -21,11 +21,11 @@ async function bootstrap() {
     const queueNames = [
       'reminder-queue',
       'time-delay-queue',
-      'pipeline-automation-queue',
-      'communication-automation-queue',
-      'marketing-automation-queue',
-      'service-automation-queue',
-      'inventory-automation-queue',
+      // 'pipeline-automation-queue',
+      // 'communication-automation-queue',
+      // 'marketing-automation-queue',
+      // 'service-automation-queue',
+      // 'inventory-automation-queue',
     ];
 
     const queues: BullAdapter[] = [];
