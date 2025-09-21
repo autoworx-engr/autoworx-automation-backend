@@ -4,9 +4,11 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   console.log('🔧 Environment:', process.env.NODE_ENV);
   console.log('🔧 Redis URL configured:', !!process.env.REDIS_HOST);
-  console.log('🔧 Redis URL configured:', !!process.env.REDIS_PORT);
-  console.log('🔧 Redis URL configured:', !!process.env.REDIS_PASSWORD);
+  console.log('🔧 Redis URL configured:', process.env.REDIS_HOST);
+  console.log('🔧 Redis URL configured:', process.env.REDIS_PORT);
+  console.log('🔧 Redis URL configured:', process.env.REDIS_PASSWORD);
   console.log('🔧 Redis URL configured:', !!process.env.REDIS_TLS);
+  console.log('🔧 Redis URL configured:', process.env.REDIS_TLS);
   console.log('🔧 Current working directory:', process.cwd());
   console.log('🔧 Worker file path:', __filename);
 
