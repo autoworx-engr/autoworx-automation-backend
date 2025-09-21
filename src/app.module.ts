@@ -53,18 +53,35 @@ import { NotificationModule } from './modules/notification/notification.module';
     }),
     BullModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        redis: {
-          host: configService.get('redis.host'),
-          port: configService.get('redis.port'),
-          password: configService.get('redis.password'),
-          maxRetriesPerRequest: null,
-          enableReadyCheck: false,
-          connectTimeout: 10000,
-          maxConnections: 100,
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const redisUrl = new URL(
+          configService.get<string>('REDIS_URL')! + '?family=6',
+        );
+
+        const host = redisUrl.hostname;
+        const port = Number(redisUrl.port);
+        const password = redisUrl.password;
+        const useTls = redisUrl.protocol === 'rediss:';
+
+        return {
+          connection: {
+            host,
+            port,
+            password,
+            family: 6,
+            tls: useTls ? { servername: host } : undefined,
+            enableReadyCheck: true,
+            maxRetriesPerRequest: null,
+          },
+          defaultJobOptions: {
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 1000 },
+            removeOnComplete: true,
+          },
+        };
+      },
     }),
+
     ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
