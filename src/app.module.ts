@@ -49,7 +49,7 @@ import { NotificationModule } from './modules/notification/notification.module';
               }
             : {
                 host: configService.get('redis.host'),
-                url: configService.get('redis.url'),
+                // url: configService.get('redis.url'),
                 port: configService.get('redis.port'),
                 username: configService.get('redis.username'),
                 password: configService.get('redis.password'),
@@ -57,7 +57,7 @@ import { NotificationModule } from './modules/notification/notification.module';
                 enableReadyCheck: false,
                 connectTimeout: 10000,
                 maxConnections: 100,
-                tls: {},
+                // tls: {},
               },
       }),
     }),
@@ -70,7 +70,7 @@ import { NotificationModule } from './modules/notification/notification.module';
             store: new CacheableMemory({ ttl: 3600000, lruSize: 5000 }),
           }),
           createKeyv(
-            configService.get('node_env') === 'development'
+            !configService.get('redis.url')
               ? `redis://${configService.get('redis.host')}:${configService.get('redis.port')}`
               : configService.get<string>('redis.url'),
             {
