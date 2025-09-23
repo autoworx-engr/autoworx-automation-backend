@@ -70,7 +70,7 @@ import { NotificationModule } from './modules/notification/notification.module';
             store: new CacheableMemory({ ttl: 3600000, lruSize: 5000 }),
           }),
           createKeyv(
-            configService.get('node_env') === 'development'
+            !configService.get('redis.url')
               ? `redis://${configService.get('redis.host')}:${configService.get('redis.port')}`
               : configService.get<string>('redis.url'),
             {
