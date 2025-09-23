@@ -14,7 +14,8 @@ export default () => ({
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD,
     prefix: process.env.REDIS_PREFIX || 'autoworx:',
-    tls: String(process.env.REDIS_TLS).toLowerCase() === 'true',
+    url: process.env.REDIS_URL || '',
+    username: process.env.REDIS_USERNAME || '',
   },
   carApi: {
     token: process.env.CAR_API_TOKEN,
