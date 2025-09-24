@@ -10,7 +10,7 @@ import * as redisStore from 'cache-manager-redis-store';
     // Since you have isGlobal: true in the main module, you can actually
     // remove this CacheModule registration if you prefer
     CacheModule.registerAsync({
-      useFactory: async () => ({
+      useFactory: () => ({
         store: redisStore,
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379', 10),
