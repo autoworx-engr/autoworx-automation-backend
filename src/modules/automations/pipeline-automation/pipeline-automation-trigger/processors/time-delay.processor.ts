@@ -6,7 +6,7 @@ import { PipelineAutomationTriggerRepository } from '../repository/pipeline-auto
 import { TimeDelayRuleService } from '../services/time-delay-rule.service';
 import { CommunicationAutomationRuleService } from '../services/communication-automation-rule.service';
 
-@Processor('time-delay-queue')
+@Processor('pipeline-time-delay')
 export class TimeDelayProcessor {
   private readonly logger = new Logger(TimeDelayProcessor.name);
   constructor(

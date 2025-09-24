@@ -18,7 +18,15 @@ async function bootstrap() {
   serverAdapter.setBasePath('/admin/queues');
 
   try {
-    const queueNames = ['reminder-queue'];
+    const queueNames = [
+      'reminder-queue',
+      'communication-time-delay',
+      'inventory-notifications',
+      'invoice-time-delay',
+      'marketing-campaign-trigger',
+      'pipeline-time-delay',
+      'service-time-delay',
+    ];
 
     const queues: BullAdapter[] = [];
 
