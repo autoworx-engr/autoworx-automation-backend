@@ -14,6 +14,8 @@ export class ReminderController {
       date: string;
       time: string;
       timezone: string;
+      when?: 'exact';
+      reminderIndex?: number;
     },
   ) {
     await this.reminderService.scheduleReminders(
@@ -21,6 +23,8 @@ export class ReminderController {
       body.date,
       body.time,
       body.timezone,
+      body.when,
+      body.reminderIndex,
     );
     return { status: 'scheduled' };
   }
@@ -33,6 +37,8 @@ export class ReminderController {
       date: string;
       time: string;
       timezone: string;
+      when?: 'exact';
+      reminderIndex?: number;
     },
   ) {
     // Delete old reminders
@@ -44,13 +50,15 @@ export class ReminderController {
       body.date,
       body.time,
       body.timezone,
+      body.when,
+      body.reminderIndex,
     );
 
     return { status: 'rescheduled' };
   }
 
   @Post('delete')
-  async delete(@Body() body: { id: string }) {
+  async delete(@Body() body: { id: string; count: number }) {
     await this.reminderService.removeReminders(body.id);
     return { status: 'deleted' };
   }
