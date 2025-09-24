@@ -16,6 +16,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as PDFDocument from 'pdfkit';
+import { UrlShortenerService } from '../../../../../shared/global-service/url-shortener/url-shortener.service';
 
 @Injectable()
 export class InventoryNotificationService {
@@ -24,7 +25,8 @@ export class InventoryNotificationService {
   constructor(
     @InjectQueue('inventory-notifications')
     private readonly notificationQueue: Queue,
-    private readonly httpService: HttpService, // <-- Inject here
+    private readonly httpService: HttpService,
+    private readonly urlShortenerService: UrlShortenerService,
   ) {}
 
   /**
@@ -51,7 +53,16 @@ export class InventoryNotificationService {
         break;
       case InventoryNotificationAction.SMS: {
         const pdfUrl = await this.generateAndUploadPdf(notificationData);
-        const smsMessage = `You are running out of stocks. View full details: ${pdfUrl}`;
+        // Create short link for the PDF URL
+        const shortLinkResult = await this.urlShortenerService.createShortLink({
+          originalUrl: pdfUrl,
+          title: `Inventory Alert - ${notificationData.ruleTitle}`,
+          description: 'Inventory stock alert details PDF',
+          companyId: notificationData.companyId,
+        });
+        
+        const finalUrl = shortLinkResult.success ? shortLinkResult.shortUrl : pdfUrl;
+        const smsMessage = `You are running out of stocks. View full details: ${finalUrl}`;
         await this.queueSmsNotifications(
           recipients,
           smsMessage,
@@ -61,8 +72,16 @@ export class InventoryNotificationService {
       }
       case InventoryNotificationAction.BOTH: {
         const pdfUrl = await this.generateAndUploadPdf(notificationData);
-        const smsMessage = `You are running out of stocks. View full details: ${pdfUrl}`;
-        console.log(smsMessage);
+        // Create short link for the PDF URL
+        const shortLinkResult = await this.urlShortenerService.createShortLink({
+          originalUrl: pdfUrl,
+          title: `Inventory Alert - ${notificationData.ruleTitle}`,
+          description: 'Inventory stock alert details PDF',
+          companyId: notificationData.companyId,
+        });
+        
+        const finalUrl = shortLinkResult.success ? shortLinkResult.shortUrl : pdfUrl;
+        const smsMessage = `You are running out of stocks. View full details: ${finalUrl}`;
         
         await Promise.all([
           this.queueEmailNotifications(
