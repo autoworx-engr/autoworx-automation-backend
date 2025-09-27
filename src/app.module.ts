@@ -41,7 +41,13 @@ import { NotificationModule } from './modules/notification/notification.module';
         console.log('🚀 ~ AppModule ~ redisUrl:', redisUrl);
         if (redisUrl) {
           return {
-            redis: redisUrl,
+            redis: {
+              url: redisUrl,
+              maxRetriesPerRequest: null,
+              enableReadyCheck: false,
+              connectTimeout: 10000,
+              maxConnections: 100,
+            },
           };
         }
         return {
