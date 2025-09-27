@@ -36,30 +36,25 @@ import { NotificationModule } from './modules/notification/notification.module';
     }),
     BullModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        redis:
-          configService.get('node_env') === 'development'
-            ? {
-                host: configService.get('redis.host'),
-                port: configService.get('redis.port'),
-                maxRetriesPerRequest: null,
-                enableReadyCheck: false,
-                connectTimeout: 10000,
-                maxConnections: 100,
-              }
-            : {
-                host: configService.get('redis.host'),
-                url: configService.get('redis.url'),
-                port: configService.get('redis.port'),
-                username: configService.get('redis.username'),
-                password: configService.get('redis.password'),
-                maxRetriesPerRequest: null,
-                enableReadyCheck: false,
-                connectTimeout: 10000,
-                maxConnections: 100,
-                // tls: {},
-              },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const redisUrl = configService.get<string>('redis.url');
+        console.log('🚀 ~ AppModule ~ redisUrl:', redisUrl);
+        if (redisUrl) {
+          return {
+            redis: redisUrl,
+          };
+        }
+        return {
+          redis: {
+            host: configService.get('redis.host'),
+            port: configService.get('redis.port'),
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
+            connectTimeout: 10000,
+            maxConnections: 100,
+          },
+        };
+      },
     }),
     CacheModule.registerAsync({
       isGlobal: true,
@@ -69,14 +64,9 @@ import { NotificationModule } from './modules/notification/notification.module';
           new Keyv({
             store: new CacheableMemory({ ttl: 3600000, lruSize: 5000 }),
           }),
-          createKeyv(
-            !configService.get('redis.url')
-              ? `redis://${configService.get('redis.host')}:${configService.get('redis.port')}`
-              : configService.get<string>('redis.url'),
-            {
-              namespace: configService.get('redis.prefix') || 'autoworx:',
-            },
-          ),
+          createKeyv(configService.get<string>('redis.url'), {
+            namespace: configService.get('redis.prefix') || 'autoworx:',
+          }),
         ],
       }),
     }),
