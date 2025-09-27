@@ -14,7 +14,7 @@ export default () => ({
     port:
       parseInt(process.env.REDISPORT || '6379', 10) ||
       parseInt(process.env.REDIS_PORT || '6379', 10),
-    password: process.env.REDIS_PASSWORD || process.env.REDIS_PASSWORD,
+    password: process.env.REDISPASSWORD || process.env.REDIS_PASSWORD,
     prefix: process.env.REDIS_PREFIX || 'autoworx:',
   },
   carApi: {
