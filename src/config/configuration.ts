@@ -12,9 +12,7 @@ export default () => ({
   redis: {
     url: process.env.REDIS_URL,
     host: process.env.REDISHOST || process.env.REDIS_HOST || 'localhost',
-    port:
-      parseInt(process.env.REDISPORT || '6379', 10) ||
-      parseInt(process.env.REDIS_PORT || '6379', 10),
+    port: process.env.REDISPORT || process.env.REDIS_PORT || '6379',
     password: process.env.REDISPASSWORD || process.env.REDIS_PASSWORD,
     prefix: process.env.REDIS_PREFIX || 'autoworx:',
   },
