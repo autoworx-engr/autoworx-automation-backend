@@ -10,6 +10,7 @@ export default () => ({
   },
   node_env: process.env.NODE_ENV || 'development',
   redis: {
+    url: process.env.REDIS_URL,
     host: process.env.REDISHOST || process.env.REDIS_HOST || 'localhost',
     port:
       parseInt(process.env.REDISPORT || '6379', 10) ||

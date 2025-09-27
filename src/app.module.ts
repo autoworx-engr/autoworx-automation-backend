@@ -49,7 +49,7 @@ import { NotificationModule } from './modules/notification/notification.module';
               }
             : {
                 host: configService.get('redis.host'),
-                // url: configService.get('redis.url'),
+                url: configService.get('redis.url'),
                 port: configService.get('redis.port'),
                 username: configService.get('redis.username'),
                 password: configService.get('redis.password'),
