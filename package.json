@@ -21,7 +21,7 @@
     "dev": " cross-env NODE_ENV=development nest start --watch",
     "start:debug": "nest start --debug --watch",
     "tsc": "npx tsc -p tsconfig.build.json",
-    "start:prod": "cross-env NODE_ENV=production node --max-old-space-size=4096 node --experimental-global-webcrypto dist/src/main",
+    "start:prod": "cross-env NODE_ENV=production node --max-old-space-size=4096 --experimental-global-webcrypto dist/src/main",
     "start:worker": "node --max-old-space-size=4096 dist/src/worker.js",
     "start:worker:dev": "cross-env NODE_ENV=development node dist/src/worker.js",
     "start:worker:prod": "cross-env NODE_ENV=production node --max-old-space-size=4096 dist/src/worker.js",
