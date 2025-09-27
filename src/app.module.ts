@@ -36,30 +36,52 @@ import { NotificationModule } from './modules/notification/notification.module';
     }),
     BullModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        redis:
-          configService.get('node_env') === 'development'
-            ? {
-                host: configService.get('redis.host'),
-                port: configService.get('redis.port'),
-                maxRetriesPerRequest: null,
-                enableReadyCheck: false,
-                connectTimeout: 10000,
-                maxConnections: 100,
-              }
-            : {
-                host: configService.get('redis.host'),
-                url: configService.get('redis.url'),
-                port: configService.get('redis.port'),
-                username: configService.get('redis.username'),
-                password: configService.get('redis.password'),
-                maxRetriesPerRequest: null,
-                enableReadyCheck: false,
-                connectTimeout: 10000,
-                maxConnections: 100,
-                tls: {},
-              },
-      }),
+      useFactory: (configService: ConfigService) => {
+        console.log(
+          "🚀 ~ configService.get('redis.url'):",
+          configService.get('redis.url'),
+        );
+        console.log(
+          "🚀 ~ configService.get('redis.host'):",
+          configService.get('redis.host'),
+        );
+        console.log(
+          "🚀 ~ configService.get('redis.port'):",
+          configService.get('redis.port'),
+        );
+        console.log(
+          "🚀 ~ configService.get('redis.username'):",
+          configService.get('redis.username'),
+        );
+        console.log(
+          "🚀 ~ configService.get('redis.password'):",
+          configService.get('redis.password'),
+        );
+        return {
+          redis:
+            configService.get('node_env') === 'development'
+              ? {
+                  host: configService.get('redis.host'),
+                  port: configService.get('redis.port'),
+                  maxRetriesPerRequest: null,
+                  enableReadyCheck: false,
+                  connectTimeout: 10000,
+                  maxConnections: 100,
+                }
+              : {
+                  host: configService.get('redis.host'),
+                  url: configService.get('redis.url'),
+                  port: configService.get('redis.port'),
+                  username: configService.get('redis.username'),
+                  password: configService.get('redis.password'),
+                  maxRetriesPerRequest: null,
+                  enableReadyCheck: false,
+                  connectTimeout: 10000,
+                  maxConnections: 100,
+                  tls: {},
+                },
+        };
+      },
     }),
     CacheModule.registerAsync({
       isGlobal: true,
