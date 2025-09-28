@@ -7,11 +7,29 @@ import { NestFactory } from '@nestjs/core';
 import { Queue } from 'bull';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import Redis from 'ioredis';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
 import { setupSwagger } from './config/swagger.config';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // Quick Redis connectivity check
+  const config = app.get(ConfigService);
+  const redisUrl =
+    config.get<string>('redis.url') ?? process.env.REDIS_URL ?? '';
+  if (redisUrl) {
+    try {
+      const client = new Redis(redisUrl);
+      const pong = await client.ping();
+      console.log('Redis PING =>', pong, 'URL:', redisUrl);
+      client.disconnect();
+    } catch (e) {
+      console.error('Redis PING failed for', redisUrl, e);
+    }
+  } else {
+    console.warn('No REDIS_URL configured');
+  }
 
   // Bull Board setup
   const serverAdapter = new ExpressAdapter();

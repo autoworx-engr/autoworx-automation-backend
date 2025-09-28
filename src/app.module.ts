@@ -112,7 +112,7 @@ import { NotificationModule } from './modules/notification/notification.module';
           createKeyv(
             configService.get('node_env') === 'development'
               ? `redis://${configService.get('redis.host')}:${configService.get('redis.port')}`
-              : configService.get<string>('redis.url'),
+              : configService.get<string>('redis.url') || process.env.REDIS_URL,
             {
               namespace: configService.get('redis.prefix') || 'autoworx:',
             },
