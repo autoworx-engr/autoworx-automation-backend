@@ -34,74 +34,73 @@ import { NotificationModule } from './modules/notification/notification.module';
       load: [configuration],
       envFilePath: ['.env'],
     }),
-    CacheModule.registerAsync({
-      isGlobal: true,
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const redisConfig = configService.get('redis');
-        const {
-          host,
-          port,
-          password,
-          username = 'default',
-          tls,
-          prefix,
-        } = redisConfig;
-
-        // Build Redis URL
-        const protocol = tls ? 'rediss' : 'redis';
-        const auth = password ? `${username}:${password}@` : '';
-        const redisUrl = `${protocol}://${auth}${host}:${port}`;
-
-        return {
-          stores: [
-            new Keyv({
-              store: new CacheableMemory({ ttl: 3600000, lruSize: 5000 }),
-            }),
-            createKeyv(redisUrl, { namespace: prefix || 'autoworx:' }),
-          ],
-        };
-      },
-    }),
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const host = configService.get<string>('redis.host');
-        const port = configService.get<number>('redis.port');
-        const password = configService.get<string>('redis.password');
-        const tls = configService.get<boolean>('redis.tls');
-
-        const connectionConfig: any = {
-          host,
-          port,
-          family: 0,
-          enableReadyCheck: false,
-          maxRetriesPerRequest: 20,
-          connectTimeout: 10000,
-        };
-
-        // Add password if exists
-        if (password) {
-          connectionConfig.password = password;
-        }
-
-        // Add username and TLS only for Upstash (when TLS is true)
-        if (tls) {
-          connectionConfig.username =
-            configService.get<string>('redis.username') || 'default';
-          connectionConfig.tls = {};
-        }
-
+        console.log(
+          "🚀 ~ configService.get('redis.url'):",
+          configService.get('redis.url'),
+        );
+        console.log(
+          "🚀 ~ configService.get('redis.host'):",
+          configService.get('redis.host'),
+        );
+        console.log(
+          "🚀 ~ configService.get('redis.port'):",
+          configService.get('redis.port'),
+        );
+        console.log(
+          "🚀 ~ configService.get('redis.username'):",
+          configService.get('redis.username'),
+        );
+        console.log(
+          "🚀 ~ configService.get('redis.password'):",
+          configService.get('redis.password'),
+        );
         return {
-          connection: connectionConfig,
-          defaultJobOptions: {
-            attempts: 3,
-            backoff: { type: 'exponential', delay: 1000 },
-            removeOnComplete: 10,
-            removeOnFail: 50,
-          },
+          redis:
+            configService.get('node_env') === 'development'
+              ? {
+                  host: configService.get('redis.host'),
+                  port: configService.get('redis.port'),
+                  maxRetriesPerRequest: null,
+                  enableReadyCheck: false,
+                  connectTimeout: 10000,
+                  maxConnections: 100,
+                }
+              : {
+                  host: configService.get('redis.host'),
+                  url: configService.get('redis.url'),
+                  port: configService.get('redis.port'),
+                  username: configService.get('redis.username'),
+                  password: configService.get('redis.password'),
+                  maxRetriesPerRequest: null,
+                  enableReadyCheck: false,
+                  connectTimeout: 10000,
+                  maxConnections: 100,
+                  tls: {},
+                },
         };
       },
+    }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        stores: [
+          new Keyv({
+            store: new CacheableMemory({ ttl: 3600000, lruSize: 5000 }),
+          }),
+          createKeyv(
+            configService.get('node_env') === 'development'
+              ? `redis://${configService.get('redis.host')}:${configService.get('redis.port')}`
+              : configService.get<string>('redis.url'),
+            {
+              namespace: configService.get('redis.prefix') || 'autoworx:',
+            },
+          ),
+        ],
+      }),
     }),
 
     ScheduleModule.forRoot(),

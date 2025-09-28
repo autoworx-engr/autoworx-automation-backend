@@ -7,6 +7,7 @@ import { GlobalRepository } from './repository/global.repository';
 import { MailUtils } from './sendEmail/mail.utils';
 import { DateUtils } from './utils/date.utils';
 import { ConversationTrackService } from './sendSms/services/conversation-track.service';
+import { UrlShortenerService } from './url-shortener/url-shortener.service';
 
 @Global() // 👈 This makes it globally available
 @Module({
@@ -19,6 +20,7 @@ import { ConversationTrackService } from './sendSms/services/conversation-track.
     MailUtils,
     DateUtils,
     ConversationTrackService,
+    UrlShortenerService,
   ],
   exports: [
     MailService,
@@ -28,6 +30,7 @@ import { ConversationTrackService } from './sendSms/services/conversation-track.
     MailUtils,
     DateUtils,
     ConversationTrackService,
+    UrlShortenerService,
   ],
 })
 export class GlobalModule {}

@@ -17,11 +17,10 @@ export class ReminderProcessor {
   ) {}
 
   @Process('send-reminder')
-  async handleReminder(job: Job<{ id: string; when: '1-day' | '2-hr' }>) {
-    const {
-      id: appointmentId,
-      // when
-    } = job.data;
+  async handleReminder(
+    job: Job<{ id: string; when: '1-day' | '2-hr' | 'exact' }>,
+  ) {
+    const { id: appointmentId, when } = job.data;
 
     const appointment = await this.prisma.appointment.findUnique({
       where: { id: +appointmentId },
@@ -38,20 +37,47 @@ export class ReminderProcessor {
             name: true,
             email: true,
             timezone: true,
+            address: true,
+            phone: true,
           },
         },
         vehicle: true,
       },
     });
 
+    if (!appointment || !appointment?.client) {
+      console.log('🚀 ~ ReminderProcessor ~ No appointment found');
+      return;
+    }
+
     const reminderTemplate = {
       subject: 'Reminder: Your <VEHICLE> Service Appointment',
       message: `Reminder: <CLIENT>, your <BUSINESS_NAME> appt is on <DATE>. If you’re not able to make it, text here to reschedule.`,
     };
 
-    if (!appointment?.client) {
-      console.log('🚀 ~ ReminderProcessor ~ No client found');
-      return;
+    if (when === 'exact') {
+      if (!appointment.reminderEmailTemplateId) {
+        console.log(
+          '🚀 ~ ReminderProcessor ~ No reminder email template set for appointment',
+        );
+        return;
+      }
+      const reminderTemplateMessage = await this.prisma.emailTemplate.findFirst(
+        {
+          where: {
+            id: appointment.reminderEmailTemplateId,
+          },
+        },
+      );
+
+      if (reminderTemplateMessage) {
+        if (reminderTemplateMessage.subject) {
+          reminderTemplate.subject = reminderTemplateMessage.subject;
+        }
+        if (reminderTemplateMessage.message) {
+          reminderTemplate.message = reminderTemplateMessage.message;
+        }
+      }
     }
 
     const tz =
@@ -99,7 +125,9 @@ export class ReminderProcessor {
         appointment.client.firstName || appointment.client.lastName || '',
       )
       ?.replace('<DATE>', appointmentDateTime.format('ddd, MMM D, h:mm A'))
-      .replace('<BUSINESS_NAME>', appointment.company?.name || '');
+      .replace('<BUSINESS_NAME>', appointment.company?.name || '')
+      ?.replace('<ADDRESS>', appointment.company?.address ?? '')
+      .replace('<PHONE>', appointment.company?.phone ?? '');
 
     try {
       await this.mailService.sendEmail({

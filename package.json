@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=16.0.0",
+    "node": ">=18.18.0",
     "npm": ">=8.0.0"
   },
   "prisma": {
@@ -21,7 +21,7 @@
     "dev": " cross-env NODE_ENV=development nest start --watch",
     "start:debug": "nest start --debug --watch",
     "tsc": "npx tsc -p tsconfig.build.json",
-    "start:prod": "cross-env NODE_ENV=production node --max-old-space-size=4096 dist/src/main",
+    "start:prod": "cross-env NODE_ENV=production node --max-old-space-size=4096 --experimental-global-webcrypto dist/src/main",
     "start:worker": "node --max-old-space-size=4096 dist/src/worker.js",
     "start:worker:dev": "cross-env NODE_ENV=development node dist/src/worker.js",
     "start:worker:prod": "cross-env NODE_ENV=production node --max-old-space-size=4096 dist/src/worker.js",
@@ -58,7 +58,7 @@
     "axios": "^1.9.0",
     "bcrypt": "^6.0.0",
     "bull": "^4.16.5",
-    "bull-board": "^1.7.2",
+    "bull-board": "^1.2.0",
     "cache-manager-redis-store": "^3.0.1",
     "cacheable": "^1.9.0",
     "class-transformer": "^0.5.1",
@@ -67,6 +67,7 @@
     "form-data": "^4.0.2",
     "moment": "^2.30.1",
     "moment-timezone": "^0.6.0",
+    "nanoid": "^3.3.7",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pdfkit": "^0.17.1",

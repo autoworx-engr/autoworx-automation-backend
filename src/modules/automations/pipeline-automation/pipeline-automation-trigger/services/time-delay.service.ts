@@ -9,7 +9,7 @@ export class TimeDelayService {
   private readonly logger = new Logger(TimeDelayService.name);
 
   constructor(
-    @InjectQueue('time-delay-queue') private readonly timeDelayQueue: Queue,
+    @InjectQueue('pipeline-time-delay') private readonly timeDelayQueue: Queue,
     private readonly pipelineAutomationTriggerRepo: PipelineAutomationTriggerRepository,
   ) {}
 

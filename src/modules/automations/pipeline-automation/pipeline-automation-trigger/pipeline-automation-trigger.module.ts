@@ -13,7 +13,7 @@ import { CommunicationAutomationTriggerModule } from '../../communication-automa
 @Module({
   imports: [
     BullModule.registerQueue({
-      name: 'time-delay-queue',
+      name: 'pipeline-time-delay',
       defaultJobOptions: {
         attempts: 3,
         removeOnComplete: true,

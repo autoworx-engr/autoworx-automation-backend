@@ -12,6 +12,8 @@ export class ReminderService {
     date: string, // e.g. "2025-07-20"
     time: string, // e.g. "15:00"
     timezone: string, // e.g. "Asia/Dhaka"
+    when?: 'exact',
+    reminderIndex?: number,
   ) {
     try {
       const now = moment().tz(timezone); // current time in target timezone
@@ -23,6 +25,18 @@ export class ReminderService {
         timezone,
       );
 
+      if (when === 'exact') {
+        if (appointmentDateTime.isAfter(now)) {
+          return await this.reminderQueue.add(
+            'send-reminder',
+            { id, when: 'exact' },
+            {
+              delay: appointmentDateTime.diff(now),
+              jobId: `reminder-${id}-${reminderIndex}-exact`,
+            },
+          );
+        }
+      }
       // const oneDayBefore = appointmentDateTime.clone().subtract(1, 'minutes');
       // const twoHrBefore = appointmentDateTime.clone().subtract(2, 'minutes');
 
@@ -51,17 +65,21 @@ export class ReminderService {
 
   async removeReminders(id: string) {
     try {
-      const jobIds = [`reminder-${id}-1-day`, `reminder-${id}-2-hr`];
+      const jobs = await this.reminderQueue.getJobs(['delayed']);
 
-      for (const jobId of jobIds) {
-        const job = await this.reminderQueue.getJob(jobId);
-        if (job) {
-          await job.remove();
-          console.log(`[ReminderService] Removed job: ${jobId}`);
-        } else {
-          console.log(`[ReminderService] Job not found: ${jobId}`);
-        }
+      const targetJobs = jobs.filter((job) =>
+        String(job.id).startsWith(`reminder-${id}-`),
+      );
+
+      if (!targetJobs.length) {
+        return;
       }
+
+      await Promise.all(
+        targetJobs.map(async (job) => {
+          await job.remove();
+        }),
+      );
     } catch (error) {
       console.error(
         `[ReminderService] Error removing reminders for id=${id}:`,
