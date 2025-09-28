@@ -34,73 +34,103 @@ import { NotificationModule } from './modules/notification/notification.module';
       load: [configuration],
       envFilePath: ['.env'],
     }),
+    // --- Bull (v3) ---
     BullModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        console.log(
-          "🚀 ~ configService.get('redis.url'):",
-          configService.get('redis.url'),
-        );
-        console.log(
-          "🚀 ~ configService.get('redis.host'):",
-          configService.get('redis.host'),
-        );
-        console.log(
-          "🚀 ~ configService.get('redis.port'):",
-          configService.get('redis.port'),
-        );
-        console.log(
-          "🚀 ~ configService.get('redis.username'):",
-          configService.get('redis.username'),
-        );
-        console.log(
-          "🚀 ~ configService.get('redis.password'):",
-          configService.get('redis.password'),
-        );
+      useFactory: (config: ConfigService) => {
+        const nodeEnv = config.get<string>('node_env') ?? 'development';
+        console.log('🚀 ~ AppModule ~ nodeEnv:', nodeEnv);
+
+        const redisUrl = config.get<string>('redis.url'); // e.g. redis://default:pass@redis.railway.internal:6379
+        console.log('🚀 ~ AppModule ~ redisUrl:', redisUrl);
+        const host = config.get<string>('redis.host') ?? 'localhost';
+        console.log('🚀 ~ AppModule ~ host:', host);
+        const port = Number(config.get<string>('redis.port') ?? 6379);
+        console.log('🚀 ~ AppModule ~ port:', port);
+        const username = config.get<string>('redis.username') || undefined;
+        console.log('🚀 ~ AppModule ~ username:', username);
+        const password = config.get<string>('redis.password') || undefined;
+        console.log('🚀 ~ AppModule ~ password:', password);
+
+        const familyEnv = config.get<string>('redis.family'); // '4' | '6' (optional)
+        console.log('🚀 ~ AppModule ~ familyEnv:', familyEnv);
+
+        // Prefer URL if provided.
+        if (redisUrl) {
+          const u = new URL(redisUrl);
+          console.log('🚀 ~ AppModule ~ u:', u);
+          const isRailwayInternal = u.hostname.endsWith('.railway.internal');
+          console.log('🚀 ~ AppModule ~ isRailwayInternal:', isRailwayInternal);
+
+          return {
+            // When passing an object, DO NOT also pass `url`
+            redis: {
+              host: u.hostname,
+              port: Number(u.port || 6379),
+              username: u.username || undefined, // Railway often uses "default"
+              password: u.password || undefined,
+              family: familyEnv ? Number(familyEnv) : undefined,
+              maxRetriesPerRequest: null,
+              enableReadyCheck: false,
+              connectTimeout: 10_000,
+              // No TLS on Railway private network
+              tls: isRailwayInternal ? undefined : {}, // only add TLS if NOT internal
+            },
+          };
+        }
+
+        // Fallback to discrete fields
+        const isRailwayInternal = host.endsWith('.railway.internal');
         return {
-          redis:
-            configService.get('node_env') === 'development'
-              ? {
-                  host: configService.get('redis.host'),
-                  port: configService.get('redis.port'),
-                  maxRetriesPerRequest: null,
-                  enableReadyCheck: false,
-                  connectTimeout: 10000,
-                  maxConnections: 100,
-                }
-              : {
-                  host: configService.get('redis.host'),
-                  url: configService.get('redis.url'),
-                  port: configService.get('redis.port'),
-                  username: configService.get('redis.username'),
-                  password: configService.get('redis.password'),
-                  maxRetriesPerRequest: null,
-                  enableReadyCheck: false,
-                  connectTimeout: 10000,
-                  maxConnections: 100,
-                  tls: {},
-                },
+          redis: {
+            host,
+            port,
+            username,
+            password,
+            family: familyEnv ? Number(familyEnv) : undefined,
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
+            connectTimeout: 10_000,
+            tls:
+              nodeEnv !== 'development' && !isRailwayInternal ? {} : undefined,
+          },
         };
       },
     }),
+
+    // --- Cache (Keyv) ---
     CacheModule.registerAsync({
       isGlobal: true,
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        stores: [
-          new Keyv({
-            store: new CacheableMemory({ ttl: 3600000, lruSize: 5000 }),
-          }),
-          createKeyv(
-            configService.get('node_env') === 'development'
-              ? `redis://${configService.get('redis.host')}:${configService.get('redis.port')}`
-              : configService.get<string>('redis.url'),
-            {
-              namespace: configService.get('redis.prefix') || 'autoworx:',
-            },
-          ),
-        ],
-      }),
+      useFactory: (config: ConfigService) => {
+        const nodeEnv = config.get<string>('node_env') ?? 'development';
+        console.log('🚀 ~ AppModule ~ nodeEnv:', nodeEnv);
+        const host = config.get<string>('redis.host') ?? 'localhost';
+        console.log('🚀 ~ AppModule ~ host:', host);
+        const port = Number(config.get<string>('redis.port') ?? 6379);
+        console.log('🚀 ~ AppModule ~ port:', port);
+        const urlFromEnv = config.get<string>('redis.url'); // prefer this if present
+        console.log('🚀 ~ AppModule ~ urlFromEnv:', urlFromEnv);
+        const prefix = config.get<string>('redis.prefix') || 'autoworx:';
+        console.log('🚀 ~ AppModule ~ prefix:', prefix);
+
+        // Build a Redis URL for Keyv
+        // If you already have REDIS_URL, use it as-is. Otherwise compose from host/port.
+        const keyvRedisUrl = urlFromEnv ?? `redis://${host}:${port}`;
+        console.log('🚀 ~ AppModule ~ keyvRedisUrl:', keyvRedisUrl);
+
+        return {
+          stores: [
+            // In-memory LRU + TTL
+            new Keyv({
+              store: new CacheableMemory({ ttl: 3_600_000, lruSize: 5000 }),
+              namespace: `${prefix}mem`,
+            }),
+            // Redis-backed cache
+            createKeyv(keyvRedisUrl, { namespace: prefix }),
+          ],
+        };
+      },
     }),
 
     ScheduleModule.forRoot(),
