@@ -28,17 +28,24 @@ async function bootstrap() {
       'service-time-delay',
     ];
 
+    console.log('Attempting to register queues with Bull Board...');
     const queues: BullAdapter[] = [];
 
     for (const queueName of queueNames) {
       try {
+        console.log(`Looking for queue: ${queueName}`);
         const queue = app.get<Queue>(getQueueToken(queueName));
         if (queue) {
           queues.push(new BullAdapter(queue));
           console.log(`✅ Added ${queueName} to Bull Board`);
+        } else {
+          console.log(`⚠️ Queue ${queueName} exists but is undefined`);
         }
       } catch (error) {
-        console.log(`⚠️  Queue ${queueName} not found, skipping...`, error);
+        console.error(
+          `❌ Error registering queue ${queueName}:`,
+          error.message,
+        );
       }
     }
 

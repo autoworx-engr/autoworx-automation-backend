@@ -55,6 +55,7 @@ import { NotificationModule } from './modules/notification/notification.module';
               connectTimeout: 10000,
               maxConnections: 100,
               tls: tlsEnabled ? {} : undefined,
+              retryStrategy: (times) => Math.min(times * 100, 3000), // Add retry strategy
             },
           };
         } else {
