@@ -16,8 +16,26 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // Quick Redis connectivity check
   const config = app.get(ConfigService);
-  const redisUrl =
-    config.get<string>('redis.url') ?? process.env.REDIS_URL ?? '';
+  let redisUrl =
+    config.get<string>('redis.url') ??
+    process.env.REDIS_URL ??
+    process.env.REDIS_PUBLIC_URL ??
+    '';
+
+  const isRailwayEnv =
+    !!process.env.RAILWAY_PROJECT_ID || !!process.env.RAILWAY_ENVIRONMENT;
+
+  if (
+    redisUrl.includes('redis.railway.internal') &&
+    !isRailwayEnv &&
+    process.env.REDIS_PUBLIC_URL
+  ) {
+    console.warn(
+      'Startup ping: internal Railway Redis URL detected locally. Using REDIS_PUBLIC_URL.',
+    );
+    redisUrl = process.env.REDIS_PUBLIC_URL!;
+  }
+
   if (redisUrl) {
     try {
       const client = new Redis(redisUrl);
