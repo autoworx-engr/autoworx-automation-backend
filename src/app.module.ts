@@ -1,5 +1,5 @@
-import { HttpModule } from '@nestjs/axios';
 import KeyvRedis from '@keyv/redis';
+import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bull';
 import { CacheModule } from '@nestjs/cache-manager';
 import { Global, Module } from '@nestjs/common';
@@ -38,7 +38,22 @@ import { NotificationModule } from './modules/notification/notification.module';
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        const redisUrl = config.get<string>('redis.url'); // e.g. redis://default:pass@redis.railway.internal:6379
+        const nodeEnv = config.get<string>('node_env') ?? 'development';
+
+        if (nodeEnv === 'development') {
+          return {
+            redis: {
+              host: config.get('redis.host'),
+              port: Number(config.get('redis.port') ?? 6379),
+              maxRetriesPerRequest: null,
+              enableReadyCheck: false,
+              connectTimeout: 10_000,
+            },
+          };
+        }
+
+        // production (Railway)
+        const redisUrl = config.get<string>('redis.url');
         if (!redisUrl) throw new Error('redis.url is required in production');
 
         const u = new URL(redisUrl);
@@ -50,13 +65,10 @@ import { NotificationModule } from './modules/notification/notification.module';
             port: Number(u.port || 6379),
             username: u.username || undefined,
             password: u.password || undefined,
-            // ← Railway often runs IPv6 internally. Force it.
-            family: 6,
-            // Bull best-practice flags:
+            family: 6, // IPv6 inside Railway private net
             maxRetriesPerRequest: null,
             enableReadyCheck: false,
             connectTimeout: 10_000,
-            // No TLS on private hostname
             tls: isInternal ? undefined : {},
           },
         };
@@ -64,20 +76,35 @@ import { NotificationModule } from './modules/notification/notification.module';
     }),
 
     // --- Cache (Keyv) ---
-
     CacheModule.registerAsync({
       isGlobal: true,
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
+        const nodeEnv = config.get<string>('node_env') ?? 'development';
         const prefix = config.get<string>('redis.prefix') || 'autoworx:';
-        const redisUrl = config.get<string>('redis.url');
 
+        if (nodeEnv === 'development') {
+          return {
+            stores: [
+              new Keyv({
+                store: new CacheableMemory({ ttl: 3_600_000, lruSize: 5000 }),
+              }),
+              new Keyv({
+                store: new KeyvRedis(
+                  `redis://${config.get('redis.host')}:${config.get('redis.port')}`,
+                ),
+                namespace: prefix,
+              }),
+            ],
+          };
+        }
+
+        // production (Railway)
+        const redisUrl = config.get<string>('redis.url');
         if (!redisUrl) throw new Error('redis.url is required in production');
 
-        // Use KeyvRedis directly so we can pass ioredis options (family: 6)
         const redisStore = new KeyvRedis(redisUrl, {
-          // family: 6, // ← important on Railway private networking
-          // no tls on *.railway.internal
+          // family: 6, // force IPv6 for Railway
         });
 
         return {
