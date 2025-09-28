@@ -28,24 +28,17 @@ async function bootstrap() {
       'service-time-delay',
     ];
 
-    console.log('Attempting to register queues with Bull Board...');
     const queues: BullAdapter[] = [];
 
     for (const queueName of queueNames) {
       try {
-        console.log(`Looking for queue: ${queueName}`);
         const queue = app.get<Queue>(getQueueToken(queueName));
         if (queue) {
           queues.push(new BullAdapter(queue));
           console.log(`✅ Added ${queueName} to Bull Board`);
-        } else {
-          console.log(`⚠️ Queue ${queueName} exists but is undefined`);
         }
       } catch (error) {
-        console.error(
-          `❌ Error registering queue ${queueName}:`,
-          error.message,
-        );
+        console.log(`⚠️  Queue ${queueName} not found, skipping...`, error);
       }
     }
 
@@ -57,13 +50,6 @@ async function bootstrap() {
       app.use('/admin/queues', serverAdapter.getRouter());
       console.log(`🎯 Bull Board configured with ${queues.length} queues`);
     }
-    app.use('/debug/routes', (req, res) => {
-      res.json({
-        bullBoardMounted: !!queues.length,
-        queuesCount: queues.length,
-        bullBoardPath: '/admin/queues',
-      });
-    });
   } catch (error) {
     console.error('Error setting up Bull Board:', error);
   }

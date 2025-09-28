@@ -37,73 +37,70 @@ import { NotificationModule } from './modules/notification/notification.module';
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const redisUrl = configService.get('redis.url');
-        const useUrl = !!redisUrl; // Use URL-based connection if a URL is provided
-        const tlsEnabled = configService.get('redis.tls');
-
-        console.log('Redis connection settings:');
-        console.log(`URL-based connection: ${useUrl ? 'Yes' : 'No'}`);
-        console.log(`TLS enabled: ${tlsEnabled ? 'Yes' : 'No'}`);
-
-        if (useUrl) {
-          console.log(`Using Redis URL: ${redisUrl}`);
-          return {
-            redis: {
-              url: redisUrl,
-              maxRetriesPerRequest: null,
-              enableReadyCheck: false,
-              connectTimeout: 10000,
-              maxConnections: 100,
-              tls: tlsEnabled ? {} : undefined,
-              retryStrategy: (times) => Math.min(times * 100, 3000), // Add retry strategy
-            },
-          };
-        } else {
-          console.log(
-            `Using Redis host: ${configService.get('redis.host')}:${configService.get('redis.port')}`,
-          );
-          return {
-            redis: {
-              host: configService.get('redis.host'),
-              port: configService.get('redis.port'),
-              username: configService.get('redis.username'),
-              password: configService.get('redis.password'),
-              maxRetriesPerRequest: null,
-              enableReadyCheck: false,
-              connectTimeout: 10000,
-              maxConnections: 100,
-              tls: tlsEnabled ? {} : undefined,
-            },
-          };
-        }
+        console.log(
+          "🚀 ~ configService.get('redis.url'):",
+          configService.get('redis.url'),
+        );
+        console.log(
+          "🚀 ~ configService.get('redis.host'):",
+          configService.get('redis.host'),
+        );
+        console.log(
+          "🚀 ~ configService.get('redis.port'):",
+          configService.get('redis.port'),
+        );
+        console.log(
+          "🚀 ~ configService.get('redis.username'):",
+          configService.get('redis.username'),
+        );
+        console.log(
+          "🚀 ~ configService.get('redis.password'):",
+          configService.get('redis.password'),
+        );
+        return {
+          redis:
+            configService.get('node_env') === 'development'
+              ? {
+                  host: configService.get('redis.host'),
+                  port: configService.get('redis.port'),
+                  maxRetriesPerRequest: null,
+                  enableReadyCheck: false,
+                  connectTimeout: 10000,
+                  maxConnections: 100,
+                }
+              : {
+                  host: configService.get('redis.host'),
+                  url: configService.get('redis.url'),
+                  port: configService.get('redis.port'),
+                  username: configService.get('redis.username'),
+                  password: configService.get('redis.password'),
+                  maxRetriesPerRequest: null,
+                  enableReadyCheck: false,
+                  connectTimeout: 10000,
+                  maxConnections: 100,
+                  tls: {},
+                },
+        };
       },
     }),
     CacheModule.registerAsync({
       isGlobal: true,
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const redisUrl = configService.get('redis.url');
-        const useUrl = !!redisUrl;
-        const tlsEnabled = configService.get('redis.tls');
-
-        // Use consistent connection approach between BullModule and CacheModule
-        const connectionString = useUrl
-          ? redisUrl
-          : `${tlsEnabled ? 'rediss' : 'redis'}://${configService.get('redis.username')}:${configService.get('redis.password')}@${configService.get('redis.host')}:${configService.get('redis.port')}`;
-
-        console.log(`CacheModule using connection string: ${connectionString}`);
-
-        return {
-          stores: [
-            new Keyv({
-              store: new CacheableMemory({ ttl: 3600000, lruSize: 5000 }),
-            }),
-            createKeyv(connectionString, {
+      useFactory: (configService: ConfigService) => ({
+        stores: [
+          new Keyv({
+            store: new CacheableMemory({ ttl: 3600000, lruSize: 5000 }),
+          }),
+          createKeyv(
+            configService.get('node_env') === 'development'
+              ? `redis://${configService.get('redis.host')}:${configService.get('redis.port')}`
+              : configService.get<string>('redis.url'),
+            {
               namespace: configService.get('redis.prefix') || 'autoworx:',
-            }),
-          ],
-        };
-      },
+            },
+          ),
+        ],
+      }),
     }),
 
     ScheduleModule.forRoot(),
