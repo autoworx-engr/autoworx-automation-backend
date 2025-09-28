@@ -80,21 +80,29 @@ import { NotificationModule } from './modules/notification/notification.module';
     CacheModule.registerAsync({
       isGlobal: true,
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        stores: [
-          new Keyv({
-            store: new CacheableMemory({ ttl: 3600000, lruSize: 5000 }),
-          }),
-          createKeyv(
-            configService.get('node_env') === 'development'
-              ? `redis://${configService.get('redis.host')}:${configService.get('redis.port')}`
-              : configService.get<string>('redis.url'),
-            {
+      useFactory: (configService: ConfigService) => {
+        const redisUrl = configService.get('redis.url');
+        const useUrl = !!redisUrl;
+        const tlsEnabled = configService.get('redis.tls');
+
+        // Use consistent connection approach between BullModule and CacheModule
+        const connectionString = useUrl
+          ? redisUrl
+          : `${tlsEnabled ? 'rediss' : 'redis'}://${configService.get('redis.username')}:${configService.get('redis.password')}@${configService.get('redis.host')}:${configService.get('redis.port')}`;
+
+        console.log(`CacheModule using connection string: ${connectionString}`);
+
+        return {
+          stores: [
+            new Keyv({
+              store: new CacheableMemory({ ttl: 3600000, lruSize: 5000 }),
+            }),
+            createKeyv(connectionString, {
               namespace: configService.get('redis.prefix') || 'autoworx:',
-            },
-          ),
-        ],
-      }),
+            }),
+          ],
+        };
+      },
     }),
 
     ScheduleModule.forRoot(),
