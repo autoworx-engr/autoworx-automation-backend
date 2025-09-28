@@ -13,8 +13,12 @@ export default () => ({
     url: process.env.REDIS_URL,
     host: process.env.REDISHOST || process.env.REDIS_HOST || 'localhost',
     port: process.env.REDISPORT || process.env.REDIS_PORT || '6379',
+    username: process.env.REDIS_USERNAME || 'default', // Add username support
     password: process.env.REDISPASSWORD || process.env.REDIS_PASSWORD,
     prefix: process.env.REDIS_PREFIX || 'autoworx:',
+    tls:
+      process.env.REDIS_TLS === 'true' ||
+      process.env.REDIS_URL?.startsWith('rediss://'),
   },
   carApi: {
     token: process.env.CAR_API_TOKEN,

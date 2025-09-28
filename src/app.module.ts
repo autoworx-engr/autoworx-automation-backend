@@ -37,50 +37,44 @@ import { NotificationModule } from './modules/notification/notification.module';
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        console.log(
-          "🚀 ~ configService.get('redis.url'):",
-          configService.get('redis.url'),
-        );
-        console.log(
-          "🚀 ~ configService.get('redis.host'):",
-          configService.get('redis.host'),
-        );
-        console.log(
-          "🚀 ~ configService.get('redis.port'):",
-          configService.get('redis.port'),
-        );
-        console.log(
-          "🚀 ~ configService.get('redis.username'):",
-          configService.get('redis.username'),
-        );
-        console.log(
-          "🚀 ~ configService.get('redis.password'):",
-          configService.get('redis.password'),
-        );
-        return {
-          redis:
-            configService.get('node_env') === 'development'
-              ? {
-                  host: configService.get('redis.host'),
-                  port: configService.get('redis.port'),
-                  maxRetriesPerRequest: null,
-                  enableReadyCheck: false,
-                  connectTimeout: 10000,
-                  maxConnections: 100,
-                }
-              : {
-                  host: configService.get('redis.host'),
-                  url: configService.get('redis.url'),
-                  port: configService.get('redis.port'),
-                  username: configService.get('redis.username'),
-                  password: configService.get('redis.password'),
-                  maxRetriesPerRequest: null,
-                  enableReadyCheck: false,
-                  connectTimeout: 10000,
-                  maxConnections: 100,
-                  tls: {},
-                },
-        };
+        const redisUrl = configService.get('redis.url');
+        const useUrl = !!redisUrl; // Use URL-based connection if a URL is provided
+        const tlsEnabled = configService.get('redis.tls');
+
+        console.log('Redis connection settings:');
+        console.log(`URL-based connection: ${useUrl ? 'Yes' : 'No'}`);
+        console.log(`TLS enabled: ${tlsEnabled ? 'Yes' : 'No'}`);
+
+        if (useUrl) {
+          console.log(`Using Redis URL: ${redisUrl}`);
+          return {
+            redis: {
+              url: redisUrl,
+              maxRetriesPerRequest: null,
+              enableReadyCheck: false,
+              connectTimeout: 10000,
+              maxConnections: 100,
+              tls: tlsEnabled ? {} : undefined,
+            },
+          };
+        } else {
+          console.log(
+            `Using Redis host: ${configService.get('redis.host')}:${configService.get('redis.port')}`,
+          );
+          return {
+            redis: {
+              host: configService.get('redis.host'),
+              port: configService.get('redis.port'),
+              username: configService.get('redis.username'),
+              password: configService.get('redis.password'),
+              maxRetriesPerRequest: null,
+              enableReadyCheck: false,
+              connectTimeout: 10000,
+              maxConnections: 100,
+              tls: tlsEnabled ? {} : undefined,
+            },
+          };
+        }
       },
     }),
     CacheModule.registerAsync({
