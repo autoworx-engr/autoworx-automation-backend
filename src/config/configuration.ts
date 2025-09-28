@@ -16,9 +16,6 @@ export default () => ({
     username: process.env.REDIS_USERNAME || 'default', // Add username support
     password: process.env.REDISPASSWORD || process.env.REDIS_PASSWORD,
     prefix: process.env.REDIS_PREFIX || 'autoworx:',
-    tls:
-      process.env.REDIS_TLS === 'true' ||
-      process.env.REDIS_URL?.startsWith('rediss://'),
   },
   carApi: {
     token: process.env.CAR_API_TOKEN,
