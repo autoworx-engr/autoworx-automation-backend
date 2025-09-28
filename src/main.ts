@@ -57,6 +57,13 @@ async function bootstrap() {
       app.use('/admin/queues', serverAdapter.getRouter());
       console.log(`🎯 Bull Board configured with ${queues.length} queues`);
     }
+    app.use('/debug/routes', (req, res) => {
+      res.json({
+        bullBoardMounted: !!queues.length,
+        queuesCount: queues.length,
+        bullBoardPath: '/admin/queues',
+      });
+    });
   } catch (error) {
     console.error('Error setting up Bull Board:', error);
   }
