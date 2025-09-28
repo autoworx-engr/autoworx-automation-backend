@@ -57,29 +57,47 @@ import { NotificationModule } from './modules/notification/notification.module';
           "🚀 ~ configService.get('redis.password'):",
           configService.get('redis.password'),
         );
+
+        const redisUrlFromConfig =
+          configService.get<string>('redis.url') ?? process.env.REDIS_URL;
+
+        // Prefer URL form; ioredis handles redis:// and rediss:// automatically.
+        if (redisUrlFromConfig) {
+          return {
+            redis: redisUrlFromConfig, // e.g., redis://:password@host:port or rediss://...
+          };
+        }
+
+        // Fallback to discrete fields when URL is not provided
+        const host =
+          configService.get<string>('redis.host') ?? process.env.REDIS_HOST;
+        const port = parseInt(
+          configService.get<string>('redis.port') ??
+            process.env.REDIS_PORT ??
+            '6379',
+          10,
+        );
+        const password =
+          configService.get<string>('redis.password') ??
+          process.env.REDIS_PASSWORD;
+        const username =
+          configService.get<string>('redis.username') ??
+          process.env.REDIS_USERNAME;
+
+        const useTls = (process.env.REDIS_TLS || '').toLowerCase() === 'true'; // only enable if explicitly true
+
         return {
-          redis:
-            configService.get('node_env') === 'development'
-              ? {
-                  host: configService.get('redis.host'),
-                  port: configService.get('redis.port'),
-                  maxRetriesPerRequest: null,
-                  enableReadyCheck: false,
-                  connectTimeout: 10000,
-                  maxConnections: 100,
-                }
-              : {
-                  host: configService.get('redis.host'),
-                  url: configService.get('redis.url'),
-                  port: configService.get('redis.port'),
-                  username: configService.get('redis.username'),
-                  password: configService.get('redis.password'),
-                  maxRetriesPerRequest: null,
-                  enableReadyCheck: false,
-                  connectTimeout: 10000,
-                  maxConnections: 100,
-                  tls: {},
-                },
+          redis: {
+            host,
+            port,
+            password,
+            ...(username ? { username } : {}),
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
+            connectTimeout: 10000,
+            maxConnections: 100,
+            ...(useTls ? { tls: {} } : {}),
+          },
         };
       },
     }),
