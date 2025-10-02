@@ -9,6 +9,7 @@ import {
   TPlaceholder,
 } from 'src/shared/global-service/sendEmail/mail.utils';
 import { SmsService } from 'src/shared/global-service/sendSms/sms.service';
+import { InfobipSmsService } from 'src/shared/global-service/sendInfobipSms/infobip-sms.service';
 import { MailService } from 'src/shared/global-service/sendEmail/mail.service';
 import { TimeDelayRuleService } from 'src/modules/automations/pipeline-automation/pipeline-automation-trigger/services/time-delay-rule.service';
 import { CommunicationAutomationService } from '../../communication-automation-rule/communication-automation.service';
@@ -24,6 +25,7 @@ export class CommunicationTimeDelayProcessor {
     private readonly globalRepository: GlobalRepository,
     private readonly mailUtils: MailUtils,
     private readonly smsService: SmsService,
+    private readonly infobipSms: InfobipSmsService,
     private readonly mailService: MailService,
     @InjectQueue('communication-time-delay')
     private readonly timeDelayQueue: Queue,
@@ -188,6 +190,7 @@ export class CommunicationTimeDelayProcessor {
         phone: true,
         address: true,
         email: true,
+        smsGateway: true,
       },
     });
 
@@ -228,7 +231,7 @@ export class CommunicationTimeDelayProcessor {
         companyEmail: companyInfo?.email || '',
         companyId: companyId,
         attachments: attachmentUrls,
-        clientId: lead.Client?.[0]?.id ?? lead.clientId, 
+        clientId: lead.Client?.[0]?.id ?? lead.clientId,
       });
     }
 
@@ -239,12 +242,25 @@ export class CommunicationTimeDelayProcessor {
         lead.Client?.[0]?.mobile &&
         isValidUSMobile(lead.Client?.[0]?.mobile)
       ) {
-        await this.smsService.sendSms({
-          companyId: companyInfo?.id,
-          clientId: lead.Client[0]?.id,
-          message: formattedSmsBody,
-          attachments: attachmentUrls,
-        });
+        try {
+          if (companyInfo.smsGateway === 'TWILIO') {
+            await this.smsService.sendSms({
+              companyId: companyId,
+              clientId: lead.Client?.[0]?.id ?? lead.clientId,
+              message: formattedSmsBody,
+              attachments: attachmentUrls,
+            });
+          } else if (companyInfo.smsGateway === 'INFOBIP') {
+            await this.infobipSms.sendInfobipSms({
+              companyId: companyId,
+              clientId: lead.Client?.[0]?.id ?? lead.clientId,
+              message: formattedSmsBody,
+              attachments: attachmentUrls,
+            });
+          }
+        } catch (error) {
+          this.logger.error(`Failed to send SMS: ${error.message}`);
+        }
       }
     }
 

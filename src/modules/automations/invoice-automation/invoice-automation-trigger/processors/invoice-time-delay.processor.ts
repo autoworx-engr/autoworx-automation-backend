@@ -6,6 +6,7 @@ import { ExecutionStatus } from '@prisma/client';
 import { MailService } from 'src/shared/global-service/sendEmail/mail.service';
 import { MailUtils } from 'src/shared/global-service/sendEmail/mail.utils';
 import { SmsService } from 'src/shared/global-service/sendSms/sms.service';
+import { InfobipSmsService } from 'src/shared/global-service/sendInfobipSms/infobip-sms.service';
 import { isValidUSMobile } from 'src/shared/global-service/utils/isValidUSMobile';
 import { TimeDelayRuleService } from 'src/modules/automations/pipeline-automation/pipeline-automation-trigger/services/time-delay-rule.service';
 import { InvoiceAutomationTriggerRepository } from '../repository/invoice-automation-trigger.repository';
@@ -18,6 +19,7 @@ export class InvoiceTimeDelayProcessor {
     private readonly globalRepository: GlobalRepository,
     private readonly mailUtils: MailUtils,
     private readonly smsService: SmsService,
+    private readonly infobipSms: InfobipSmsService,
     private readonly mailService: MailService,
     @Inject(forwardRef(() => TimeDelayRuleService))
     private readonly timeDelayRuleService: TimeDelayRuleService,
@@ -133,12 +135,25 @@ export class InvoiceTimeDelayProcessor {
           invoice.client?.mobile &&
           isValidUSMobile(invoice.client?.mobile)
         ) {
-          await this.smsService.sendSms({
-            companyId: companyInfo?.id,
-            clientId: invoice.client?.id,
-            message: formattedSmsBody,
-            attachments: attachmentUrls,
-          });
+          try {
+            if (companyInfo.smsGateway === 'TWILIO') {
+              await this.smsService.sendSms({
+                companyId: companyInfo?.id,
+                clientId: invoice.client?.id,
+                message: formattedSmsBody,
+                attachments: attachmentUrls,
+              });
+            } else if (companyInfo.smsGateway === 'INFOBIP') {
+              await this.infobipSms.sendInfobipSms({
+                companyId: companyInfo?.id,
+                clientId: invoice.client?.id,
+                message: formattedSmsBody,
+                attachments: attachmentUrls,
+              });
+            }
+          } catch (error) {
+            this.logger.error(`Failed to send SMS: ${error.message}`);
+          }
 
           this.logger.log(
             `SMS successfully sent to Name:${invoice.client?.firstName + ' ' + invoice.client?.lastName}, Mobile:${invoice.client?.mobile} via invoice automation.`,
