@@ -8,6 +8,9 @@ import { MailUtils } from './sendEmail/mail.utils';
 import { DateUtils } from './utils/date.utils';
 import { ConversationTrackService } from './sendSms/services/conversation-track.service';
 import { UrlShortenerService } from './url-shortener/url-shortener.service';
+import { InfobipSmsService } from './sendInfobipSms/infobip-sms.service';
+import { InfobipSmsRepository } from './sendInfobipSms/repositories/sms.repository';
+import { InfobipConversationTrackService } from './sendInfobipSms/services/conversation-track.service';
 
 @Global() // 👈 This makes it globally available
 @Module({
@@ -21,6 +24,9 @@ import { UrlShortenerService } from './url-shortener/url-shortener.service';
     DateUtils,
     ConversationTrackService,
     UrlShortenerService,
+    InfobipSmsService,
+    InfobipSmsRepository,
+    InfobipConversationTrackService,
   ],
   exports: [
     MailService,
@@ -31,6 +37,9 @@ import { UrlShortenerService } from './url-shortener/url-shortener.service';
     DateUtils,
     ConversationTrackService,
     UrlShortenerService,
+    InfobipSmsService,
+    InfobipSmsRepository,
+    InfobipConversationTrackService,
   ],
 })
 export class GlobalModule {}

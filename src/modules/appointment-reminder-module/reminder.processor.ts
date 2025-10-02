@@ -5,6 +5,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MailService } from 'src/shared/global-service/sendEmail/mail.service';
 import { SmsService } from 'src/shared/global-service/sendSms/sms.service';
+import { InfobipSmsService } from 'src/shared/global-service/sendInfobipSms/infobip-sms.service';
 import * as moment from 'moment-timezone';
 
 @Processor('reminder-queue')
@@ -14,6 +15,7 @@ export class ReminderProcessor {
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
     private readonly sms: SmsService,
+    private readonly infobipSms: InfobipSmsService,
   ) {}
 
   @Process('send-reminder')
@@ -39,6 +41,7 @@ export class ReminderProcessor {
             timezone: true,
             address: true,
             phone: true,
+            smsGateway: true,
           },
         },
         vehicle: true,
@@ -146,12 +149,25 @@ export class ReminderProcessor {
     }
 
     try {
-      await this.sms.sendSms({
-        companyId: appointment.companyId,
-        clientId: appointment.clientId!,
-        message: message ?? '',
-        attachments: [],
-      });
+      if (appointment.company?.smsGateway === 'TWILIO') {
+        await this.sms.sendSms({
+          companyId: appointment.companyId,
+          clientId: appointment.clientId!,
+          message: message ?? '',
+          attachments: [],
+        });
+        console.log('🚀 ~ ReminderProcessor ~ handleReminder ~ SMS sent');
+      } else if (appointment.company?.smsGateway === 'INFOBIP') {
+        await this.infobipSms.sendInfobipSms({
+          companyId: appointment.companyId,
+          clientId: appointment.clientId!,
+          message: message ?? '',
+          attachments: [],
+        });
+        console.log(
+          '🚀 ~ ReminderProcessor ~ handleReminder ~ Infobip SMS sent',
+        );
+      }
     } catch (error) {
       console.error('Failed to send SMS:', error.message);
     }
