@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  
+
   directUrl   = env("DIRECT_URL")
 }
 
@@ -547,6 +547,7 @@ model Company {
   UserFeedback                     UserFeedback[]
   ClientSMS                        ClientSMS[]
   ClientCall                       ClientCall[]
+  infobipConfig                    InfobipConfig?
   TwilioCredentials                TwilioCredentials?                 @relation(fields: [twilioCredentialsId], references: [id])
   twilioCredentialsId              Int?
   MailgunCredential                MailgunCredential?                 @relation(fields: [mailgunCredentialId], references: [id])
@@ -567,8 +568,15 @@ model Company {
   BugReport                        BugReport[]
   salaryHistory                    SalaryHistory[]
   appointmentTitles                AppointmentTitle[]
-  shortLinks                       ShortLink[] // Short links associated with this company
+  shortLinks                       ShortLink[]
+  smsGateway                       SmsGateway @default(TWILIO)
 }
+
+enum SmsGateway {
+  TWILIO
+  INFOBIP
+}
+
 
 // create model that will handle multiple companies join and collaboration
 model CompanyJoin {
@@ -739,6 +747,19 @@ model CompanyEmailTemplate {
   @@map("companyEmailTemplate")
 }
 
+
+model InfobipConfig {
+  id          Int    @id @default(autoincrement())
+  companyId   Int    @unique @map("company_id")
+  phoneNumber String @map("phone_number")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("infobip_config")
+}
 model TwilioCredentials {
   id Int @id @default(autoincrement())
 
@@ -1524,6 +1545,7 @@ model Payment {
   date            DateTime?
   notes           String?
   amount          Decimal? // Original payment amount
+  dueAfterPayment Decimal?        @map("due_after_payment") @db.Decimal(8, 2) // Due amount remaining after this payment
   refundedAmount  Decimal?        @default(0) @map("refunded_amount")
   refundMethod    PaymentType?    @map("refund_method")
   refundReason    String?         @map("refund_reason")
@@ -2147,7 +2169,7 @@ model ShortLink {
   companyId   Int?     // Optional company association
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
-  
+
   user        User?    @relation(fields: [createdBy], references: [id], onDelete: SetNull)
   company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
