@@ -73,6 +73,7 @@ export class InfobipSmsService {
       const infobipApiKey = this.configService.get<string>('INFOBIP_API_KEY');
       const infobipBaseUrl =
         'https://' + this.configService.get<string>('INFOBIP_BASE_URL');
+
       let infobipResponse;
 
       // Helper function to determine content type
