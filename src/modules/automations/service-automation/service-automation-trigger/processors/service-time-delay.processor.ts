@@ -10,6 +10,7 @@ import {
   TPlaceholder,
 } from 'src/shared/global-service/sendEmail/mail.utils';
 import { SmsService } from 'src/shared/global-service/sendSms/sms.service';
+import { InfobipSmsService } from 'src/shared/global-service/sendInfobipSms/infobip-sms.service';
 import { IServiceAutomationTrigger } from '../interfaces/service-automation-trigger.interface';
 import { isValidUSMobile } from 'src/shared/global-service/utils/isValidUSMobile';
 
@@ -20,6 +21,7 @@ export class ServiceTimeDelayProcessor {
     private readonly globalRepository: GlobalRepository,
     private readonly mailUtils: MailUtils,
     private readonly smsService: SmsService,
+    private readonly infobipSms: InfobipSmsService,
     private readonly mailService: MailService,
   ) {}
   private readonly logger = new Logger(ServiceTimeDelayProcessor.name);
@@ -91,6 +93,7 @@ export class ServiceTimeDelayProcessor {
             phone: true,
             address: true,
             email: true,
+            smsGateway: true,
           },
         },
       );
@@ -154,12 +157,25 @@ export class ServiceTimeDelayProcessor {
           estimate.client.mobile &&
           isValidUSMobile(estimate.client.mobile)
         ) {
-          await this.smsService.sendSms({
-            companyId: companyInfo?.id,
-            clientId: estimate.client.id,
-            message: formattedSmsBody,
-            attachments: attachmentUrls,
-          });
+          try {
+            if (companyInfo.smsGateway === 'TWILIO') {
+              await this.smsService.sendSms({
+                companyId: companyInfo?.id,
+                clientId: estimate.client.id,
+                message: formattedSmsBody,
+                attachments: attachmentUrls,
+              });
+            } else if (companyInfo.smsGateway === 'INFOBIP') {
+              await this.infobipSms.sendInfobipSms({
+                companyId: companyInfo?.id,
+                clientId: estimate.client.id,
+                message: formattedSmsBody,
+                attachments: attachmentUrls,
+              });
+            }
+          } catch (error) {
+            this.logger.error(`Failed to send SMS: ${error.message}`);
+          }
         }
         this.logger.log(
           `SMS successfully sent to Name:${estimate.client?.firstName + ' ' + estimate.client?.lastName}, Mobile:${estimate.client?.mobile} via service automation.`,

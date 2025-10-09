@@ -7,6 +7,8 @@ import {
 } from '../interfaces/inventory-email.interface';
 import { Twilio } from 'twilio';
 import { isValidUSMobile } from '../../../../../shared/global-service/utils/isValidUSMobile';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class InventoryMessagingService {
@@ -15,6 +17,8 @@ export class InventoryMessagingService {
   constructor(
     private readonly mailService: MailService,
     private readonly smsRepository: SmsRepository,
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -57,41 +61,84 @@ export class InventoryMessagingService {
     userId: number,
   ): Promise<void> {
     try {
-      // Get Twilio credentials for the company
-      const twilioCredentials =
-        await this.smsRepository.getTwilioCredentialsById(smsProps.companyId);
-
-      if (!twilioCredentials) {
-        throw new Error(
-          `Twilio credentials not found for company ID: ${smsProps.companyId}`,
-        );
-      }
-
-      const { accountSid, phoneNumber, apiKeySid, apiKeySecret } =
-        twilioCredentials;
-
-      if (!accountSid || !apiKeySid || !apiKeySecret) {
-        throw new Error('Incomplete Twilio credentials');
-      }
-
-      // Initialize Twilio client
-      const twilio = new Twilio(apiKeySid, apiKeySecret, {
-        accountSid,
+      const company = await this.prisma.company.findFirst({
+        where: { id: smsProps.companyId },
+        select: { smsGateway: true },
       });
 
-      // Normalize phone number
-      const normalizedPhone = this.normalizeUSPhoneNumber(smsProps.to);
+      if (company?.smsGateway === 'TWILIO') {
+        const twilioCredentials =
+          await this.smsRepository.getTwilioCredentialsById(smsProps.companyId);
 
-      if (!normalizedPhone || !isValidUSMobile(normalizedPhone)) {
-        throw new Error(`Invalid US mobile number format: ${smsProps.to}`);
+        if (!twilioCredentials) {
+          throw new Error(
+            `Twilio credentials not found for company ID: ${smsProps.companyId}`,
+          );
+        }
+
+        const { accountSid, phoneNumber, apiKeySid, apiKeySecret } =
+          twilioCredentials;
+
+        if (!accountSid || !apiKeySid || !apiKeySecret) {
+          throw new Error('Incomplete Twilio credentials');
+        }
+
+        // Initialize Twilio client
+        const twilio = new Twilio(apiKeySid, apiKeySecret, {
+          accountSid,
+        });
+
+        // Normalize phone number
+        const normalizedPhone = this.normalizeUSPhoneNumber(smsProps.to);
+
+        if (!normalizedPhone || !isValidUSMobile(normalizedPhone)) {
+          throw new Error(`Invalid US mobile number format: ${smsProps.to}`);
+        }
+
+        // Send SMS directly via Twilio
+        await twilio.messages.create({
+          body: smsProps.message,
+          from: phoneNumber,
+          to: normalizedPhone,
+        });
+      } else if (company?.smsGateway === 'INFOBIP') {
+        const infobipConfig = await this.prisma.infobipConfig.findFirst({
+          where: { companyId: smsProps.companyId },
+        });
+
+        if (!infobipConfig) {
+          throw new Error('Infobip configuration not found');
+        }
+
+        const infobipApiKey = this.configService.get<string>('INFOBIP_API_KEY');
+        const infobipBaseUrl =
+          'https://' + this.configService.get<string>('INFOBIP_BASE_URL');
+
+        const normalizedPhone = this.normalizeUSPhoneNumber(smsProps.to);
+
+        // Send SMS without attachments
+        const smsPayload = {
+          messages: [
+            {
+              sender: infobipConfig.phoneNumber,
+              destinations: [{ to: normalizedPhone }],
+              content: {
+                text: smsProps.message,
+              },
+            },
+          ],
+        };
+
+        await fetch(`${infobipBaseUrl}/sms/3/messages`, {
+          method: 'POST',
+          headers: {
+            Authorization: `App ${infobipApiKey}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(smsPayload),
+        });
       }
-
-      // Send SMS directly via Twilio
-      await twilio.messages.create({
-        body: smsProps.message,
-        from: phoneNumber,
-        to: normalizedPhone,
-      });
 
       this.logger.log(`Inventory SMS sent successfully to ${smsProps.to}`);
     } catch (error) {

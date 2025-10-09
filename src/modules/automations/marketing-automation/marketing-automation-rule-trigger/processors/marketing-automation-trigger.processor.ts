@@ -6,6 +6,7 @@ import {
 } from 'src/shared/global-service/sendEmail/mail.utils';
 import { MailService } from 'src/shared/global-service/sendEmail/mail.service';
 import { SmsService } from 'src/shared/global-service/sendSms/sms.service';
+import { InfobipSmsService } from 'src/shared/global-service/sendInfobipSms/infobip-sms.service';
 import { Logger, LoggerService, NotFoundException } from '@nestjs/common';
 import { MarketingAutomationTriggerRepository } from '../repository/marketing-automation-trigger.repository';
 import { MarketingAutomationTriggerService } from '../services/marketing-automation-rule-trigger.service';
@@ -20,6 +21,7 @@ export class MarketingAutomationProcessor {
     private readonly marketingTriggerService: MarketingAutomationTriggerService,
     private readonly globalRepository: GlobalRepository,
     private readonly smsService: SmsService,
+    private readonly infobipSms: InfobipSmsService,
     private readonly mailService: MailService,
     private readonly mailUtils: MailUtils,
   ) {}
@@ -50,6 +52,7 @@ export class MarketingAutomationProcessor {
           phone: true,
           address: true,
           email: true,
+          smsGateway: true,
         },
       },
     );
@@ -107,12 +110,25 @@ export class MarketingAutomationProcessor {
 
       if (['SMS', 'BOTH'].includes(marketingRule.communicationType)) {
         if (client.mobile && isValidUSMobile(client.mobile)) {
-          await this.smsService.sendSms({
-            companyId: marketingRule.companyId,
-            clientId: client.id,
-            message: formattedSmsBody,
-            attachments: attachmentUrls,
-          });
+          try {
+            if (companyInfo?.smsGateway === 'TWILIO') {
+              await this.smsService.sendSms({
+                companyId: marketingRule.companyId,
+                clientId: client.id,
+                message: formattedSmsBody,
+                attachments: attachmentUrls,
+              });
+            } else if (companyInfo?.smsGateway === 'INFOBIP') {
+              await this.infobipSms.sendInfobipSms({
+                companyId: marketingRule.companyId,
+                clientId: client.id,
+                message: formattedSmsBody,
+                attachments: attachmentUrls,
+              });
+            }
+          } catch (error) {
+            this.logger.error(`Failed to send SMS: ${error.message}`);
+          }
         }
 
         this.logger.log(
