@@ -43,6 +43,12 @@ export class ServiceAutomationRuleService {
 
   async findAll(companyId: number) {
     const cachedKey = `${this.RULES_LIST_KEY}${companyId}`;
+
+    // this.logger.log(
+    //   'service get RULE_CACHE_KEY with company ID',
+    //   `${this.RULES_LIST_KEY}${companyId}`,
+    // );
+
     const cachedRules = await this.cacheManager.get<string>(cachedKey);
 
     if (cachedRules) {
@@ -95,9 +101,17 @@ export class ServiceAutomationRuleService {
       updateServiceAutomationRuleDto,
     );
     // Invalidate caches
+    // this.logger.log(
+    //   'service update RULE_CACHE_KEY',
+    //   `${this.RULE_CACHE_KEY}${id}`,
+    // );
+    // this.logger.log(
+    //   'service update RULE_CACHE_KEY with company ID',
+    //   `${this.RULES_LIST_KEY}${updatedRule?.companyId}`,
+    // );
     await this.cacheManager.del(`${this.RULE_CACHE_KEY}${id}`);
     await this.cacheManager.del(
-      `${this.RULES_LIST_KEY}${updateServiceAutomationRuleDto?.companyId}`,
+      `${this.RULES_LIST_KEY}${updatedRule?.companyId}`,
     );
 
     // Cache the updated individual rule
