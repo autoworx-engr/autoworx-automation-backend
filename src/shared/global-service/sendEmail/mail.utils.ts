@@ -31,7 +31,7 @@ export class MailUtils {
       BUSINESS_PHONE: placeholdersValue?.businessPhone || '',
       BUSINESS_ADDRESS: placeholdersValue?.businessAddress || '',
       GOOGLE_MAP_LINK: placeholdersValue?.googleMapLink || '',
-      INVOICE_LINK: placeholdersValue?.invoiceLink,
+      INVOICE_LINK: placeholdersValue?.invoiceLink + ' ',
       ADDRESS: placeholdersValue?.address,
       CLIENT: placeholdersValue?.client,
       DATE: placeholdersValue?.date,

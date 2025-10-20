@@ -117,7 +117,7 @@ export class InvoiceTimeDelayProcessor {
           companyEmail: companyInfo?.email || '',
           companyId: companyId,
           attachments: attachmentUrls,
-          clientId: invoice.client?.id!,
+          clientId: invoice?.client?.id,
         });
 
         this.logger.log(
