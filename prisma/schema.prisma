@@ -111,6 +111,7 @@ model TimeDelayExecution {
   estimateId                String?
   serviceMaintenanceRuleId  Int?
   invoiceAutomationRuleId   Int?
+  tagAutomationRuleId       Int?
   lead                      Lead?                             @relation(fields: [leadId], references: [id], onDelete: Cascade)
   estimate                  Invoice?                          @relation(fields: [estimateId], references: [id], onDelete: Cascade)
   executeAt                 DateTime
@@ -126,6 +127,7 @@ model TimeDelayExecution {
   InvoiceAutomationRule     InvoiceAutomationRule?            @relation(fields: [invoiceAutomationRuleId], references: [id], onDelete: SetNull)
   InventoryAutomationRule   InventoryAutomationRule?          @relation(fields: [inventoryAutomationRuleId], references: [id])
   inventoryAutomationRuleId Int?
+  tagAutomationRule         TagAutomationRule?                @relation(fields: [tagAutomationRuleId], references: [id])
 
   @@index([executeAt, status])
   @@index([pipelineRuleId])
@@ -310,9 +312,10 @@ model TagAutomationRule {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @default(now()) @updatedAt
 
-  tagAutomationPipeline      TagAutomationPipeline?
+tagAutomationPipeline      TagAutomationPipeline?
   tagAutomationCommunication TagAutomationCommunication?
   PostTagAutomationColumn    PostTagAutomationColumn[]
+  timeDelayExecution         TimeDelayExecution[]
 }
 
 model TagAutomationPipeline {
