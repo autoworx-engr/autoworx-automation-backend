@@ -6,7 +6,7 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 
-  directUrl   = env("DIRECT_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // Appointment for a company.
@@ -69,6 +69,7 @@ model AppointmentTitle {
   @@index([companyId])
   @@map("appointment_titles")
 }
+
 // Pipeline Automation Schema
 
 model PipelineAutomationRule {
@@ -254,8 +255,10 @@ model AutomationAttachment {
   communicationId      Int?
   marketingId          Int?
   serviceMaintenanceId Int?
+  tagCommunicationId   Int?
   invoiceId            Int?
   communication        CommunicationAutomationRule?      @relation("CommunicationAttachments", fields: [communicationId], references: [id])
+  tagCommunication     TagAutomationCommunication?       @relation("TagAutomationCommunicationAttachments", fields: [tagCommunicationId], references: [id])
   marketing            MarketingAutomationRule?          @relation("MarketingAttachments", fields: [marketingId], references: [id])
   serviceMaintenance   ServiceMaintenanceAutomationRule? @relation("ServiceMaintenanceAttachments", fields: [serviceMaintenanceId], references: [id])
   invoice              InvoiceAutomationRule?            @relation("InvoiceAttachments", fields: [invoiceId], references: [id])
@@ -289,6 +292,80 @@ model InventoryAutomationTeamMember {
   user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([inventoryRuleId, userId])
+}
+
+// TODO: Tag Automation Schema
+// tag automation rules
+model TagAutomationRule {
+  id             Int           @id @default(autoincrement())
+  companyId      Int
+  title          String
+  timeDelay      Int           @default(0) // in seconds
+  condition_type ConditionType
+
+  pipelineType PipelineType
+  ruleType     TagRuleType?
+  tag          Tag[]
+  columns      Column[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @default(now()) @updatedAt
+
+  tagAutomationPipeline      TagAutomationPipeline?
+  tagAutomationCommunication TagAutomationCommunication?
+  PostTagAutomationColumn    PostTagAutomationColumn[]
+}
+
+model TagAutomationPipeline {
+  id              Int               @id @default(autoincrement())
+  tagAutomationId Int               @unique
+  targetColumnId  Int
+  tagAutomation   TagAutomationRule @relation(fields: [tagAutomationId], references: [id], onDelete: Cascade)
+  column          Column            @relation(fields: [targetColumnId], references: [id], onDelete: Cascade)
+
+  @@index([tagAutomationId])
+}
+
+model TagAutomationCommunication {
+  id                Int                    @id @default(autoincrement())
+  tagAutomationId   Int                    @unique
+  communicationType CommunicationType
+  subject           String?
+  emailBody         String?                @db.Text
+  smsBody           String?                @db.Text
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  attachments       AutomationAttachment[] @relation("TagAutomationCommunicationAttachments")
+  tagAutomation     TagAutomationRule      @relation(fields: [tagAutomationId], references: [id], onDelete: Cascade)
+
+  @@index([tagAutomationId])
+}
+
+model PostTagAutomationColumn {
+  id              Int      @id @default(autoincrement())
+  tagAutomationId Int
+  columnId        Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  tagAutomation TagAutomationRule @relation(fields: [tagAutomationId], references: [id], onDelete: Cascade)
+
+  @@index([tagAutomationId])
+}
+
+enum TagRuleType {
+  one_time
+  recurring
+}
+
+enum TagConditionType {
+  pipeline
+  communication
+  post_tag
+}
+
+enum PipelineType {
+  SALES
+  SHOP
 }
 
 // Enums
@@ -365,6 +442,7 @@ enum InventoryNotificationAction {
   SMS
   BOTH
 }
+
 // Client of a company.
 // Client is just data, they can't login.
 model Client {
@@ -461,7 +539,7 @@ model ClientConversationTrack {
   emailIsUnReadCount Int       @default(0) @map("email_is_unread_count")
   smsUnReadCount     Int       @default(0) @map("sms_unread_count")
   emailLastMessage   String?   @map("email_last_message") @db.Text
-  smsLastMessage     String?   @map("sms_last_message")  @db.Text
+  smsLastMessage     String?   @map("sms_last_message") @db.Text
   lastMessageBy      String?   @map("last_message_by")
   lastEmailBy        String?   @map("last_email_by") // Track who sent the last email: "Company" or "Client"
   sendAt             DateTime? @map("send_at")
@@ -469,6 +547,7 @@ model ClientConversationTrack {
   updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at")
   client             Client    @relation(fields: [clientId], references: [id], onDelete: Cascade) // Update this line to establish the one-to-one relation
 }
+
 // Company model.
 // Every user belongs to a company.
 // For now, every user has to create their own company when registering.
@@ -495,8 +574,8 @@ model Company {
   currency                         String?                            @default("USD")
   terms                            String?                            @db.VarChar(800)
   policy                           String?                            @db.VarChar(800)
-  leadTerms                        String?                            @db.Text @map("lead_terms")
-  leadPolicy                       String?                            @db.Text @map("lead_policy")
+  leadTerms                        String?                            @map("lead_terms") @db.Text
+  leadPolicy                       String?                            @map("lead_policy") @db.Text
   googleEmail                      String?                            @map("google_email")
   googleRefreshToken               String?                            @map("google_refresh_token")
   googleCalendarToken              String?                            @map("google_calendar_token")
@@ -569,14 +648,13 @@ model Company {
   salaryHistory                    SalaryHistory[]
   appointmentTitles                AppointmentTitle[]
   shortLinks                       ShortLink[]
-  smsGateway                       SmsGateway @default(TWILIO)
+  smsGateway                       SmsGateway                         @default(TWILIO)
 }
 
 enum SmsGateway {
   TWILIO
   INFOBIP
 }
-
 
 // create model that will handle multiple companies join and collaboration
 model CompanyJoin {
@@ -747,7 +825,6 @@ model CompanyEmailTemplate {
   @@map("companyEmailTemplate")
 }
 
-
 model InfobipConfig {
   id          Int    @id @default(autoincrement())
   companyId   Int    @unique @map("company_id")
@@ -760,6 +837,7 @@ model InfobipConfig {
 
   @@map("infobip_config")
 }
+
 model TwilioCredentials {
   id Int @id @default(autoincrement())
 
@@ -836,6 +914,7 @@ model MailgunEmailAttachment {
   mailgunEmailId Int
   mailgunEmail   MailgunEmail @relation(fields: [mailgunEmailId], references: [id], onDelete: Cascade)
 }
+
 // Category of a invoice.
 // Category is a part of Service, Material and Labor.
 // It's an independant model. So, one category can be in multiple services, materials and labors.
@@ -897,11 +976,14 @@ model Column {
   serviceMaintenanceStageForRules  ServiceMaintenanceAutomationRule[] @relation("conditionColumn")
   invoiceAutomationRule            InvoiceAutomationRule[]            @relation("invoiceStatus")
   InvoiceAutomationRule            InvoiceAutomationRule[]
+  tagAutomationRuleColumns         TagAutomationRule[]
+  tagAutomationPipeline            TagAutomationPipeline[]
 
   @@index([companyId])
   @@index([type])
   @@index([type, companyId])
 }
+
 model InventoryProduct {
   id                      Int                       @id @default(autoincrement())
   name                    String
@@ -1003,6 +1085,7 @@ model inventoryWirehouseProduct {
   @@index([unit])
   @@index([category, productName])
 }
+
 // InvoiceItem of a invoice.
 // Its a holder for service, material and labor.
 // One invoice can have multiple InvoiceItems.
@@ -1139,6 +1222,7 @@ model Tag {
   InvoiceTags         InvoiceTags[]
   InventoryProductTag InventoryProductTag[]
   leadTags            LeadTags[]
+  tagAutomationRule   TagAutomationRule[]
 
   @@index([companyId, type]) // NEW: Index for better query performance
 }
@@ -1180,6 +1264,7 @@ enum TagType {
   CLIENT // For clients
   INVENTORY // For inventory products
 }
+
 // Invoice of a company.
 // Note that `Invoice` is same as `Estimate`. So don't get confused.
 // We can differentiate them by `type` field.
@@ -1360,6 +1445,7 @@ model InvoiceInspection {
 
   @@index([invoiceId], name: "fk_invoice_inspections_invoice")
 }
+
 // Message for chat.
 model Message {
   id                Int              @id @default(autoincrement())
@@ -1451,6 +1537,7 @@ enum UserType {
   super_admin
   company
 }
+
 // notification settings model
 model NotificationSettingsV2 {
   id                Int                 @id @default(autoincrement())
@@ -1535,6 +1622,7 @@ model Notification {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
+
 // Payment of a invoice.
 // One invoice can have one payment. And one payment can't be in multiple invoices.
 // Payment can be of type card, check, cash or other.
@@ -1702,6 +1790,7 @@ enum DiscountType {
   Percentage
   Fixed
 }
+
 // Permission Module System for Super Admin
 // Simple permission system with predefined modules
 
@@ -1721,34 +1810,36 @@ model CompanyPermissionModule {
 
   @@unique([companyId, permission_name])
 }
+
 // Salary History model to track changes in salary configuration
 // This allows proper calculation of payouts across different salary periods
 model SalaryHistory {
-    id           Int        @id @default(autoincrement())
-    userId       Int        @map("user_id")
-    companyId    Int        @map("company_id")
-    salaryType   SalaryType @map("salary_type")
-    salaryAmount Decimal    @map("salary_amount") @db.Decimal(10, 2)
-    startDate    DateTime   @map("start_date")
-    endDate      DateTime?  @map("end_date") // null means current/active salary
-    isActive     Boolean    @default(true) @map("is_active")
-    createdAt    DateTime   @default(now()) @map("created_at")
-    updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
+  id           Int        @id @default(autoincrement())
+  userId       Int        @map("user_id")
+  companyId    Int        @map("company_id")
+  salaryType   SalaryType @map("salary_type")
+  salaryAmount Decimal    @map("salary_amount") @db.Decimal(10, 2)
+  startDate    DateTime   @map("start_date")
+  endDate      DateTime?  @map("end_date") // null means current/active salary
+  isActive     Boolean    @default(true) @map("is_active")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
 
-    user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-    @@index([userId, isActive], name: "fk_salary_history_user_active")
-    @@index([companyId], name: "fk_salary_history_company")
-    @@index([startDate, endDate], name: "idx_salary_history_dates")
+  @@index([userId, isActive], name: "fk_salary_history_user_active")
+  @@index([companyId], name: "fk_salary_history_company")
+  @@index([startDate, endDate], name: "idx_salary_history_dates")
 }
 
 enum SalaryType {
-    HOURLY
-    BI_WEEKLY
-    WEEKLY
-    MONTHLY
+  HOURLY
+  BI_WEEKLY
+  WEEKLY
+  MONTHLY
 }
+
 // Task for a company.
 model Task {
   id            Int        @id @default(autoincrement())
@@ -1791,6 +1882,7 @@ model TaskUser {
 
   @@index([taskId])
 }
+
 model UserFeedback {
   id                     Int                      @id @default(autoincrement())
   userId                 Int                      @map("user_id")
@@ -1813,6 +1905,7 @@ model UserFeedbackAttachment {
   updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at")
   userFeedback   UserFeedback @relation(fields: [userFeedbackId], references: [id])
 }
+
 // User model.
 // User can be employee or admin.
 // When user registers, they have to create a company. So, every new user is an admin.
@@ -2003,7 +2096,7 @@ model Permission {
   payments                      Boolean @default(false)
   workforceManagement           Boolean @default(false) @map("workforce_management")
   reporting                     Boolean @default(false)
-  inventoryAll                     Boolean @default(false)
+  inventoryAll                  Boolean @default(false)
   integrations                  Boolean @default(false)
   salesPipeline                 Boolean @default(false) @map("sales_pipeline")
   shopPipeline                  Boolean @default(false) @map("shop_pipeline")
@@ -2113,6 +2206,7 @@ enum ClientSMSSentBy {
   Client
   Company
 }
+
 // Vehicle of a company.
 model Vehicle {
   id                     Int      @id @default(autoincrement())
@@ -2157,21 +2251,21 @@ model VehicleColor {
 
 // Generic URL shortener for any links
 model ShortLink {
-  id          Int      @id @default(autoincrement())
-  shortCode   String   @unique @db.VarChar(10) // Short unique identifier (e.g., "abc123")
-  originalUrl String   @unique @db.VarChar(767) // The original URL - unique to prevent duplicates
-  title       String?  @db.VarChar(255) // Optional title for the link
-  description String?  @db.Text // Optional description
-  clicks      Int      @default(0) // Track number of clicks
-  isActive    Boolean  @default(true) // Allow enabling/disabling links
+  id          Int       @id @default(autoincrement())
+  shortCode   String    @unique @db.VarChar(10) // Short unique identifier (e.g., "abc123")
+  originalUrl String    @unique @db.VarChar(767) // The original URL - unique to prevent duplicates
+  title       String?   @db.VarChar(255) // Optional title for the link
+  description String?   @db.Text // Optional description
+  clicks      Int       @default(0) // Track number of clicks
+  isActive    Boolean   @default(true) // Allow enabling/disabling links
   expiresAt   DateTime? // Optional expiration date
-  createdBy   Int?     // Optional user who created the link
-  companyId   Int?     // Optional company association
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  createdBy   Int? // Optional user who created the link
+  companyId   Int? // Optional company association
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
 
-  user        User?    @relation(fields: [createdBy], references: [id], onDelete: SetNull)
-  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  user    User?    @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@index([shortCode])
   @@index([createdBy])
