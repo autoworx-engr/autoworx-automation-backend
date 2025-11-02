@@ -299,20 +299,19 @@ model InventoryAutomationTeamMember {
 // TODO: Tag Automation Schema
 // tag automation rules
 model TagAutomationRule {
-  id             Int           @id @default(autoincrement())
+  id             Int              @id @default(autoincrement())
   companyId      Int
   title          String
-  timeDelay      Int           @default(0) // in seconds
-  condition_type ConditionType
+  timeDelay      Int              @default(0) // in seconds
+  condition_type TagConditionType
 
   pipelineType PipelineType
   ruleType     TagRuleType?
   tag          Tag[]
-  columns      Column[]
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @default(now()) @updatedAt
 
-tagAutomationPipeline      TagAutomationPipeline?
+  tagAutomationPipeline      TagAutomationPipeline?
   tagAutomationCommunication TagAutomationCommunication?
   PostTagAutomationColumn    PostTagAutomationColumn[]
   timeDelayExecution         TimeDelayExecution[]
@@ -351,6 +350,7 @@ model PostTagAutomationColumn {
   updatedAt       DateTime @default(now()) @updatedAt
 
   tagAutomation TagAutomationRule @relation(fields: [tagAutomationId], references: [id], onDelete: Cascade)
+  column        Column            @relation(fields: [columnId], references: [id], onDelete: Cascade)
 
   @@index([tagAutomationId])
 }
@@ -731,6 +731,7 @@ model Lead {
   source              String
   comments            String?
   companyId           Int        @map("company_id")
+  isTagAutomationTriggered Boolean    @default(false) @map("is_tag_automation_triggered")
   createdAt           DateTime   @default(now()) @map("created_at")
   updatedAt           DateTime   @default(now()) @updatedAt @map("updated_at")
   columnChangedAt     DateTime?  @map("column_changed_at")
@@ -979,8 +980,9 @@ model Column {
   serviceMaintenanceStageForRules  ServiceMaintenanceAutomationRule[] @relation("conditionColumn")
   invoiceAutomationRule            InvoiceAutomationRule[]            @relation("invoiceStatus")
   InvoiceAutomationRule            InvoiceAutomationRule[]
-  tagAutomationRuleColumns         TagAutomationRule[]
+  // tagAutomationRuleColumns         TagAutomationRule[]
   tagAutomationPipeline            TagAutomationPipeline[]
+  postTagAutomationColumn          PostTagAutomationColumn[]
 
   @@index([companyId])
   @@index([type])
