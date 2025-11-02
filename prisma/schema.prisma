@@ -299,23 +299,21 @@ model InventoryAutomationTeamMember {
 // TODO: Tag Automation Schema
 // tag automation rules
 model TagAutomationRule {
-  id             Int           @id @default(autoincrement())
-  companyId      Int
-  title          String
-  timeDelay      Int           @default(0) // in seconds
-  condition_type ConditionType
-
-  pipelineType PipelineType
-  ruleType     TagRuleType?
-  tag          Tag[]
-  columns      Column[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @default(now()) @updatedAt
-
-tagAutomationPipeline      TagAutomationPipeline?
+  id                         Int                         @id @default(autoincrement())
+  companyId                  Int
+  title                      String
+  timeDelay                  Int                         @default(0) // in seconds
+  condition_type             ConditionType
+  pipelineType               PipelineType
+  ruleType                   TagRuleType?
+  tag                        Tag[]
+  columns                    Column[]
+  tagAutomationPipeline      TagAutomationPipeline?
   tagAutomationCommunication TagAutomationCommunication?
   PostTagAutomationColumn    PostTagAutomationColumn[]
   timeDelayExecution         TimeDelayExecution[]
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @default(now()) @updatedAt
 }
 
 model TagAutomationPipeline {
