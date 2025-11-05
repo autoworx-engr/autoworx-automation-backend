@@ -53,7 +53,6 @@ export class TagAutomationRuleController {
     type: [ResponseTagAutomationRuleDto],
   })
   findAll(@Query('companyId', ParseIntPipe) companyId: number) {
-    console.log('companyId', companyId);
     return this.tagAutomationRuleService.findAll(companyId);
   }
 

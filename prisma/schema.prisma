@@ -309,7 +309,6 @@ model TagAutomationRule {
   ruleType                   TagRuleType?
   tag                        Tag[]
   // columns                    Column[]
-
   tagAutomationPipeline      TagAutomationPipeline?
   tagAutomationCommunication TagAutomationCommunication?
   PostTagAutomationColumn    PostTagAutomationColumn[]
