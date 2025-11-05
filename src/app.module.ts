@@ -19,10 +19,12 @@ import { InvoiceAutomationTriggerModule } from './modules/automations/invoice-au
 import { MarketingAutomationModule } from './modules/automations/marketing-automation/marketing-automation.module';
 import { PipelineAutomationModule } from './modules/automations/pipeline-automation/pipeline-automation.module';
 import { ServiceAutomationModule } from './modules/automations/service-automation/service-automation.module';
+
 import { PrismaModule } from './prisma/prisma.module';
 import { GlobalModule } from './shared/global-service/global.module';
 
 import { ReminderModule } from './modules/appointment-reminder-module/reminder.module';
+import { TagAutomationRuleModule } from './modules/automations/tag-automation/tag-automation-rule/tag-automation-rule.module';
 import { NotificationModule } from './modules/notification/notification.module';
 @Global()
 @Module({
@@ -137,6 +139,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     AdminPermissionModule,
     ReminderModule,
     NotificationModule,
+    TagAutomationRuleModule,
   ],
   controllers: [],
   providers: [],

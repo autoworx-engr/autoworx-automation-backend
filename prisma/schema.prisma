@@ -299,22 +299,23 @@ model InventoryAutomationTeamMember {
 // TODO: Tag Automation Schema
 // tag automation rules
 model TagAutomationRule {
-  id             Int              @id @default(autoincrement())
-  companyId      Int
-  title          String
-  timeDelay      Int              @default(0) // in seconds
-  condition_type TagConditionType
-
-  pipelineType PipelineType
-  ruleType     TagRuleType?
-  tag          Tag[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @default(now()) @updatedAt
+  id                         Int                         @id @default(autoincrement())
+  companyId                  Int
+  title                      String
+  timeDelay                  Int                         @default(0) // in seconds
+  isPaused           Boolean                @default(false)
+  condition_type             TagConditionType
+  pipelineType               PipelineType
+  ruleType                   TagRuleType?
+  tag                        Tag[]
+  // columns                    Column[]
 
   tagAutomationPipeline      TagAutomationPipeline?
   tagAutomationCommunication TagAutomationCommunication?
   PostTagAutomationColumn    PostTagAutomationColumn[]
   timeDelayExecution         TimeDelayExecution[]
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @default(now()) @updatedAt
 }
 
 model TagAutomationPipeline {
@@ -331,6 +332,8 @@ model TagAutomationCommunication {
   id                Int                    @id @default(autoincrement())
   tagAutomationId   Int                    @unique
   communicationType CommunicationType
+  isSendWeekDays     Boolean                @default(false)
+  isSendOfficeHours  Boolean                @default(false)
   subject           String?
   emailBody         String?                @db.Text
   smsBody           String?                @db.Text
@@ -345,13 +348,10 @@ model TagAutomationCommunication {
 model PostTagAutomationColumn {
   id              Int      @id @default(autoincrement())
   tagAutomationId Int
-  columnId        Int
+  columnIds                    Column[]
+  tagAutomation TagAutomationRule @relation(fields: [tagAutomationId], references: [id], onDelete: Cascade)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @default(now()) @updatedAt
-
-  tagAutomation TagAutomationRule @relation(fields: [tagAutomationId], references: [id], onDelete: Cascade)
-  column        Column            @relation(fields: [columnId], references: [id], onDelete: Cascade)
-
   @@index([tagAutomationId])
 }
 
@@ -731,7 +731,6 @@ model Lead {
   source              String
   comments            String?
   companyId           Int        @map("company_id")
-  isTagAutomationTriggered Boolean    @default(false) @map("is_tag_automation_triggered")
   createdAt           DateTime   @default(now()) @map("created_at")
   updatedAt           DateTime   @default(now()) @updatedAt @map("updated_at")
   columnChangedAt     DateTime?  @map("column_changed_at")
@@ -981,8 +980,8 @@ model Column {
   invoiceAutomationRule            InvoiceAutomationRule[]            @relation("invoiceStatus")
   InvoiceAutomationRule            InvoiceAutomationRule[]
   // tagAutomationRuleColumns         TagAutomationRule[]
+  postTagAutomationColumns         PostTagAutomationColumn[]
   tagAutomationPipeline            TagAutomationPipeline[]
-  postTagAutomationColumn          PostTagAutomationColumn[]
 
   @@index([companyId])
   @@index([type])
