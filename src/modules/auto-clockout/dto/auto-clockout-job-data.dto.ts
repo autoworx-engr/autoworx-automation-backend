@@ -1,3 +1,4 @@
+import { Optional } from '@nestjs/common';
 import { IsDateString, IsInt, IsOptional, IsString } from 'class-validator';
 
 export class AutoClockOutJobDataDto {
@@ -12,6 +13,10 @@ export class AutoClockOutJobDataDto {
 
   @IsDateString()
   clockIn: string;
+
+  @IsDateString()
+  @Optional()
+  officeEnd: string;
 
   @IsOptional()
   @IsString()

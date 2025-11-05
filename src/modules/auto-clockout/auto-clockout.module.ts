@@ -8,6 +8,11 @@ import { AutoClockOutService } from './auto-clockout.service';
   imports: [
     BullModule.registerQueue({
       name: 'auto-clockout-queue',
+      defaultJobOptions: {
+        attempts: 3,
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
     }),
   ],
   controllers: [AutoClockOutController],
