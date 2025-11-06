@@ -26,6 +26,7 @@ async function bootstrap() {
       'marketing-campaign-trigger',
       'pipeline-time-delay',
       'service-time-delay',
+      'auto-clockout-queue',
     ];
 
     const queues: BullAdapter[] = [];

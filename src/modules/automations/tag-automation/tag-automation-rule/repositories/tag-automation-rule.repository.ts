@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateTagAutomationRuleDto } from '../dto/create-tag-automation-rule.dto';
 import { UpdateTagAutomationRuleDto } from '../dto/update-tag-automation-rule.dto';
@@ -10,79 +14,6 @@ export class TagAutomationRuleRepository {
   // -------------------------------------------------------
   //  CREATE RULE — handles all automation condition types
   // -------------------------------------------------------
-
-  // async createRule(dto: CreateTagAutomationRuleDto) {
-  //   const {
-  //     condition_type,
-  //     communicationType,
-  //     isSendOfficeHours,
-  //     isSendWeekDays,
-  //     emailBody,
-  //     smsBody,
-  //     subject,
-  //     attachments,
-  //     tagIds,
-  //     columnIds,
-  //     title,
-  //     pipelineType,
-  //     ruleType,
-  //     timeDelay,
-  //     isPaused,
-  //     companyId,
-  //   } = dto;
-
-  //   return await this.prisma.tagAutomationRule.create({
-  //     data: {
-  //       title,
-  //       companyId,
-  //       pipelineType,
-  //       ruleType,
-  //       timeDelay,
-  //       isPaused,
-  //       condition_type,
-  //       tag: {
-  //         connect: tagIds?.map((id) => ({ id })) ?? [],
-  //       },
-  //       ...(condition_type === 'communication' &&
-  //         communicationType && {
-  //           tagAutomationCommunication: {
-  //             create: {
-  //               communicationType,
-  //               isSendWeekDays,
-  //               isSendOfficeHours,
-  //               emailBody,
-  //               smsBody,
-  //               subject,
-  //               attachments: attachments?.length
-  //                 ? { create: attachments.map(({ fileUrl }) => ({ fileUrl })) }
-  //                 : undefined,
-  //             },
-  //           },
-  //         }),
-  //       ...(condition_type === 'pipeline' &&
-  //         columnIds?.[0] != null && {
-  //           tagAutomationPipeline: {
-  //             create: { targetColumnId: columnIds[0] },
-  //           },
-  //         }),
-  //       ...(condition_type === 'post_tag' && columnIds?.length
-  //         ? {
-  //             PostTagAutomationColumn: {
-  //               create: columnIds.map((id) => ({
-  //                 columnIds: { connect: { id } },
-  //               })),
-  //             },
-  //           }
-  //         : {}),
-  //     },
-  //     include: {
-  //       tagAutomationCommunication: true,
-  //       tagAutomationPipeline: true,
-  //       PostTagAutomationColumn: true,
-  //       tag: true,
-  //     },
-  //   });
-  // }
 
   async createRule(dto: CreateTagAutomationRuleDto) {
     const {
@@ -102,6 +33,7 @@ export class TagAutomationRuleRepository {
       timeDelay,
       isPaused,
       companyId,
+      targetColumnId,
     } = dto;
 
     // --- Basic validation ---
@@ -140,13 +72,41 @@ export class TagAutomationRuleRepository {
     }
 
     // --- Condition-specific validation ---
+
+    //--- Condition-specific validation for communication ---
     if (condition_type === 'communication') {
       if (!communicationType)
         throw new Error(
           'communicationType is required for communication condition',
         );
       if (!emailBody && !smsBody)
-        throw new Error('At least emailBody or smsBody must be provided');
+        throw new BadRequestException(
+          'At least emailBody or smsBody must be provided',
+        );
+    }
+
+    // --- Condition-specific validation for pipeline ---
+    if (condition_type === 'pipeline') {
+      if (!targetColumnId)
+        throw new BadRequestException(
+          'targetColumnId is required for pipeline condition',
+        );
+
+      const targetColumn = await this.prisma.column.findUnique({
+        where: { id: targetColumnId },
+      });
+      if (!targetColumn)
+        throw new BadRequestException(
+          'No valid targetColumn found for provided targetColumnId',
+        );
+    }
+
+    // --- Condition-specific validation for post_tag ---
+    if (condition_type === 'post_tag') {
+      if (!validColumns.length)
+        throw new BadRequestException(
+          'At least one valid columnId is required for post_tag condition',
+        );
     }
 
     // --- Build Prisma data object ---
@@ -163,46 +123,91 @@ export class TagAutomationRuleRepository {
       },
     };
 
+    const tagAutomationRuleData = await this.prisma.tagAutomationRule.create({
+      data: data,
+      include: {
+        tagAutomationCommunication: { include: { attachments: true } },
+        tag: true,
+        tagAutomationPipeline: true,
+        PostTagAutomationColumn: true,
+      },
+    });
+
     if (condition_type === 'communication' && communicationType) {
-      data.tagAutomationCommunication = {
-        create: {
-          communicationType,
-          isSendWeekDays,
-          isSendOfficeHours,
-          emailBody,
-          smsBody,
-          subject,
-          attachments: attachments?.length
-            ? { create: attachments.map(({ fileUrl }) => ({ fileUrl })) }
-            : undefined,
-        },
-      };
+      // await this.prisma.tagAutomationCommunication.create({
+      //   data: {
+      //     communicationType,
+      //     isSendWeekDays,
+      //     isSendOfficeHours,
+      //     emailBody,
+      //     smsBody,
+      //     subject,
+      //     tagAutomationId: tagAutomationRuleData?.id,
+      //     attachments: attachments?.length
+      //       ? { create: attachments.map(({ fileUrl }) => ({ fileUrl })) }
+      //       : undefined,
+      //   },
+      //   include: {
+      //     attachments: true,
+      //   },
+      // });
+
+      const communicationRecord =
+        await this.prisma.tagAutomationCommunication.create({
+          data: {
+            communicationType,
+            isSendWeekDays,
+            isSendOfficeHours,
+            emailBody,
+            smsBody,
+            subject,
+            tagAutomationId: tagAutomationRuleData.id,
+            attachments: attachments?.length
+              ? { create: attachments.map(({ fileUrl }) => ({ fileUrl })) }
+              : undefined,
+          },
+          include: { attachments: true },
+        });
+
+      // attach to main object
+      tagAutomationRuleData.tagAutomationCommunication = communicationRecord;
     }
 
-    if (condition_type === 'pipeline' && validColumns[0]) {
-      data.tagAutomationPipeline = {
-        create: { targetColumnId: validColumns[0].id },
-      };
+    if (condition_type === 'pipeline' && targetColumnId) {
+      const pipeline = await this.prisma.tagAutomationPipeline.create({
+        data: {
+          tagAutomationId: tagAutomationRuleData.id,
+          targetColumnId,
+        },
+        include: {
+          column: true,
+          // tagAutomation: true,
+        },
+      });
+
+      // Attach it manually to the main rule object
+      tagAutomationRuleData.tagAutomationPipeline = pipeline;
+      // console.log('Created pipeline:', pipeline);
     }
 
     if (condition_type === 'post_tag' && validColumns.length) {
-      data.PostTagAutomationColumn = {
-        create: validColumns,
-      };
+      const postTagColumn = await this.prisma.postTagAutomationColumn.create({
+        data: {
+          tagAutomationId: tagAutomationRuleData?.id,
+          columnIds: {
+            connect: columnIds?.map((cid) => ({ id: cid })),
+          },
+        },
+        include: {
+          columnIds: true,
+          tagAutomation: { include: { tag: true } },
+        },
+      });
+      // console.log('Created PostTagAutomationColumn:', postTagColumn);
+      return postTagColumn;
     }
 
-    // --- Execute Prisma create ---
-    return await this.prisma.tagAutomationRule.create({
-      data,
-      include: {
-        tagAutomationCommunication: true,
-        tagAutomationPipeline: true,
-        PostTagAutomationColumn: {
-          include: { columnIds: true },
-        },
-        tag: true,
-      },
-    });
+    return tagAutomationRuleData;
   }
 
   // -------------------------------------------------------
@@ -213,7 +218,7 @@ export class TagAutomationRuleRepository {
       where: { companyId },
       include: {
         tag: true,
-        tagAutomationCommunication: true,
+        tagAutomationCommunication: { include: { attachments: true } },
         tagAutomationPipeline: true,
         PostTagAutomationColumn: true,
       },
@@ -239,21 +244,141 @@ export class TagAutomationRuleRepository {
   // -------------------------------------------------------
   //  UPDATE
   // -------------------------------------------------------
-  async updateRule(id: number, updateDto: UpdateTagAutomationRuleDto) {
-    const { tagIds, ...updateData } = updateDto;
 
-    return this.prisma.tagAutomationRule.update({
-      where: { id },
-      data: {
-        ...updateData,
-        ...(tagIds ? { tag: { set: tagIds.map((id) => ({ id })) } } : {}),
-      },
-      include: {
-        tag: true,
-        tagAutomationCommunication: true,
-        tagAutomationPipeline: true,
-        PostTagAutomationColumn: true,
-      },
+  async updateRule(id: number, updateDto: UpdateTagAutomationRuleDto) {
+    const {
+      tagIds,
+      columnIds,
+      targetColumnId,
+      communicationType,
+      isSendWeekDays,
+      isSendOfficeHours,
+      emailBody,
+      smsBody,
+      subject,
+      attachments,
+      ...updateData
+    } = updateDto;
+
+    return this.prisma.$transaction(async (prisma) => {
+      const existingRule = await prisma.tagAutomationRule.findUnique({
+        where: { id },
+        include: {
+          tagAutomationCommunication: true,
+          tagAutomationPipeline: true,
+          PostTagAutomationColumn: true,
+          tag: true,
+        },
+      });
+
+      if (!existingRule) {
+        throw new NotFoundException(
+          `Tag automation rule with ID ${id} not found`,
+        );
+      }
+
+      // --------------------------
+      // Update tags if provided
+      // --------------------------
+      if (tagIds) {
+        await prisma.tagAutomationRule.update({
+          where: { id },
+          data: {
+            tag: {
+              set: tagIds.map((tid) => ({ id: tid })),
+            },
+          },
+        });
+      }
+
+      // --------------------------
+      // Update communication condition
+      // --------------------------
+      if (
+        existingRule.condition_type === 'communication' &&
+        (communicationType || attachments)
+      ) {
+        // Delete old attachments
+        await prisma.automationAttachment.deleteMany({
+          where: {
+            tagCommunicationId: existingRule.tagAutomationCommunication?.id,
+          },
+        });
+
+        // Create new attachments
+        if (
+          attachments?.length &&
+          existingRule.tagAutomationCommunication?.id
+        ) {
+          await prisma.automationAttachment.createMany({
+            data: attachments.map((att) => ({
+              tagCommunicationId: existingRule.tagAutomationCommunication!.id,
+              fileUrl: att.fileUrl,
+            })),
+          });
+        }
+
+        // Update communication details
+        await prisma.tagAutomationCommunication.update({
+          where: { id: existingRule.tagAutomationCommunication!.id },
+          data: {
+            communicationType,
+            isSendWeekDays,
+            isSendOfficeHours,
+            emailBody,
+            smsBody,
+            subject,
+          },
+        });
+      }
+
+      // --------------------------
+      // Update pipeline condition
+      // --------------------------
+      if (existingRule.condition_type === 'pipeline' && targetColumnId) {
+        await prisma.tagAutomationPipeline.update({
+          where: { id: existingRule.tagAutomationPipeline?.id },
+          data: {
+            targetColumnId,
+          },
+        });
+      }
+
+      // --------------------------
+      // Update post_tag condition
+      // --------------------------
+      if (existingRule.condition_type === 'post_tag' && columnIds) {
+        // Delete old post_tag columns
+        await prisma.postTagAutomationColumn.deleteMany({
+          where: { tagAutomationId: id },
+        });
+
+        // Add new columns
+        if (columnIds.length) {
+          await prisma.postTagAutomationColumn.createMany({
+            data: columnIds.map((cid) => ({
+              tagAutomationId: id,
+              columnIdsId: cid, // make sure your Prisma field name is correct
+            })),
+          });
+        }
+      }
+
+      // --------------------------
+      // Update main rule
+      // --------------------------
+      const updatedRule = await prisma.tagAutomationRule.update({
+        where: { id },
+        data: updateData,
+        include: {
+          tag: true,
+          tagAutomationCommunication: true,
+          tagAutomationPipeline: true,
+          PostTagAutomationColumn: true,
+        },
+      });
+
+      return updatedRule;
     });
   }
 
@@ -261,6 +386,70 @@ export class TagAutomationRuleRepository {
   //  DELETE
   // -------------------------------------------------------
   async deleteRule(id: number) {
-    return this.prisma.tagAutomationRule.delete({ where: { id } });
+    return this.prisma.$transaction(async (prisma) => {
+      const existingRule = await prisma.tagAutomationRule.findUnique({
+        where: { id },
+        include: {
+          tagAutomationCommunication: true,
+          tagAutomationPipeline: true,
+          PostTagAutomationColumn: true,
+          tag: true,
+        },
+      });
+
+      if (!existingRule) {
+        throw new NotFoundException(
+          `Tag automation rule with ID ${id} not found`,
+        );
+      }
+
+      // --------------------------
+      // Delete attachments for communication
+      // --------------------------
+      if (
+        existingRule.condition_type === 'communication' &&
+        existingRule.tagAutomationCommunication?.id
+      ) {
+        await prisma.automationAttachment.deleteMany({
+          where: {
+            tagCommunicationId: existingRule.tagAutomationCommunication.id,
+          },
+        });
+
+        await prisma.tagAutomationCommunication.delete({
+          where: { id: existingRule.tagAutomationCommunication.id },
+        });
+      }
+
+      // --------------------------
+      // Delete pipeline record
+      // --------------------------
+      if (
+        existingRule.condition_type === 'pipeline' &&
+        existingRule.tagAutomationPipeline?.id
+      ) {
+        await prisma.tagAutomationPipeline.delete({
+          where: { id: existingRule.tagAutomationPipeline.id },
+        });
+      }
+
+      // --------------------------
+      // Delete post_tag columns
+      // --------------------------
+      if (existingRule.condition_type === 'post_tag') {
+        await prisma.postTagAutomationColumn.deleteMany({
+          where: { tagAutomationId: id },
+        });
+      }
+
+      // --------------------------
+      // Finally delete main tag automation rule
+      // --------------------------
+      await prisma.tagAutomationRule.delete({
+        where: { id },
+      });
+
+      return { id, message: 'Tag automation rule deleted successfully' };
+    });
   }
 }

@@ -1,37 +1,107 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { ConditionType, PipelineType, TagRuleType } from '@prisma/client';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class ResponseTagAutomationRuleDto {
-  @ApiProperty({ example: 1 })
-  id: number;
+// ---------- Basic Models ----------
 
-  @ApiProperty({ example: 'Tag Follow Up' })
-  title: string;
+export class TagResponseDto {
+  @ApiProperty() id: number;
+  @ApiProperty() name: string;
+  @ApiProperty() textColor: string;
+  @ApiProperty() bgColor: string;
+  @ApiProperty() type: string;
+  @ApiProperty() companyId: number;
+  @ApiProperty() createdAt: string;
+  @ApiProperty() updatedAt: string;
+}
 
-  @ApiProperty({ example: 1 })
-  companyId: number;
+export class ColumnResponseDto {
+  @ApiProperty() id: number;
+  @ApiProperty() title: string;
+  @ApiProperty() type: string;
+  @ApiProperty() order: number;
+  @ApiProperty() textColor: string;
+  @ApiProperty() bgColor: string;
+  @ApiProperty() companyId: number;
+}
 
-  @ApiProperty({ example: 0 })
-  timeDelay: number;
+export class AttachmentResponseDto {
+  @ApiProperty() id: number;
+  @ApiProperty() fileUrl: string;
+  @ApiPropertyOptional() tagCommunicationId?: number;
+  @ApiProperty() createdAt: string;
+  @ApiProperty() updatedAt: string;
+}
 
-  @ApiProperty({ enum: ConditionType })
-  conditionType: ConditionType;
+// ---------- Communication Automation ----------
 
-  @ApiProperty({ enum: PipelineType })
-  pipelineType: PipelineType;
+export class TagAutomationCommunicationResponseDto {
+  @ApiProperty() id: number;
+  @ApiProperty() tagAutomationId: number;
+  @ApiProperty() communicationType: string;
+  @ApiProperty() isSendWeekDays: boolean;
+  @ApiProperty() isSendOfficeHours: boolean;
+  @ApiProperty() subject: string;
+  @ApiProperty() emailBody: string;
+  @ApiProperty() smsBody: string;
+  @ApiProperty({ type: [AttachmentResponseDto] })
+  attachments: AttachmentResponseDto[];
+  @ApiProperty() createdAt: string;
+  @ApiProperty() updatedAt: string;
+}
 
-  @ApiProperty({ enum: TagRuleType, required: false })
-  ruleType?: TagRuleType;
+// ---------- Pipeline Automation ----------
 
-  @ApiProperty({ type: [Number], example: [1, 2] })
-  tagIds: number[];
+export class TagAutomationPipelineResponseDto {
+  @ApiProperty() id: number;
+  @ApiProperty() tagAutomationId: number;
+  @ApiProperty() targetColumnId: number;
+  @ApiProperty({ type: ColumnResponseDto })
+  column: ColumnResponseDto;
+}
 
-  @ApiProperty({ type: [Number], example: [1, 2] })
-  columnIds: number[];
+// ---------- Post Tag Automation ----------
 
-  @ApiProperty({ example: '2025-11-04T12:00:00Z' })
-  createdAt: Date;
+export class PostTagAutomationColumnResponseDto {
+  @ApiProperty() id: number;
+  @ApiProperty() tagAutomationId: number;
+  @ApiProperty({ type: [ColumnResponseDto] })
+  columnIds: ColumnResponseDto[];
+}
 
-  @ApiProperty({ example: '2025-11-04T12:00:00Z' })
-  updatedAt: Date;
+// ---------- Unified Automation Data ----------
+
+export class TagAutomationDataResponseDto {
+  @ApiProperty() id: number;
+  @ApiProperty() companyId: number;
+  @ApiProperty() title: string;
+  @ApiProperty() timeDelay: number;
+  @ApiProperty() isPaused: boolean;
+  @ApiProperty() condition_type: string;
+  @ApiProperty() pipelineType: string;
+  @ApiProperty() ruleType: string;
+  @ApiProperty() createdAt: string;
+  @ApiProperty() updatedAt: string;
+
+  @ApiPropertyOptional({ type: TagAutomationCommunicationResponseDto })
+  tagAutomationCommunication?: TagAutomationCommunicationResponseDto;
+
+  @ApiPropertyOptional({ type: TagAutomationPipelineResponseDto })
+  tagAutomationPipeline?: TagAutomationPipelineResponseDto;
+
+  @ApiPropertyOptional({ type: [PostTagAutomationColumnResponseDto] })
+  PostTagAutomationColumn?: PostTagAutomationColumnResponseDto[];
+
+  @ApiProperty({ type: [TagResponseDto] })
+  tag: TagResponseDto[];
+}
+
+// ---------- Standardized Base Wrapper ----------
+
+export class BaseTagAutomationResponseDto {
+  @ApiProperty({ example: true }) status: boolean;
+  @ApiProperty({ example: 200 }) statusCode: number;
+  @ApiProperty({ example: 'Success' }) message: string;
+  @ApiProperty({ type: TagAutomationDataResponseDto })
+  data: TagAutomationDataResponseDto;
+  @ApiProperty({ example: '2025-11-06T16:10:11.471Z' }) timestamp: string;
+  @ApiProperty({ example: '/tag-automation-rules' }) path: string;
 }

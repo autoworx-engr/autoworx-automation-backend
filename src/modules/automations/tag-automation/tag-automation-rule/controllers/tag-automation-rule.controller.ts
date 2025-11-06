@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -20,7 +21,6 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateTagAutomationRuleDto } from '../dto/create-tag-automation-rule.dto';
-import { ResponseTagAutomationRuleDto } from '../dto/response-tag-automation-rule.dto';
 import { UpdateTagAutomationRuleDto } from '../dto/update-tag-automation-rule.dto';
 import { TagAutomationRuleService } from '../services/tag-automation-rule.service';
 
@@ -34,11 +34,67 @@ export class TagAutomationRuleController {
   ) {}
 
   @Post()
+  @ApiBody({
+    description: 'Create Tag Automation Rule',
+    type: CreateTagAutomationRuleDto,
+    examples: {
+      salesPipeline: {
+        summary: 'Sales → Pipeline',
+        value: {
+          title: 'Pipeline Tag Automation',
+          companyId: 1,
+          pipelineType: 'SALES',
+          condition_type: 'pipeline',
+          ruleType: 'one_time',
+          timeDelay: 3600,
+          isPaused: false,
+          tagIds: [1, 2],
+          targetColumnId: 1,
+        },
+      },
+      shopPostTag: {
+        summary: 'Shop → Post Tag',
+        value: {
+          title: 'Post Tag Automation',
+          companyId: 1,
+          pipelineType: 'SHOP',
+          condition_type: 'post_tag',
+          ruleType: 'one_time',
+          timeDelay: 86400,
+          isPaused: false,
+          tagIds: [1, 2],
+          columnIds: [2, 3],
+        },
+      },
+      salesCommunication: {
+        summary: 'Sales → Communication',
+        value: {
+          title: 'Communication Tag Automation',
+          companyId: 1,
+          pipelineType: 'SALES',
+          condition_type: 'communication',
+          ruleType: 'recurring',
+          timeDelay: 1800,
+          isPaused: false,
+          tagIds: [1, 2],
+          communicationType: 'EMAIL',
+          isSendWeekDays: true,
+          isSendOfficeHours: false,
+          subject: 'Follow Up Email',
+          emailBody: 'Hello {{lead_name}}, please check this!',
+          smsBody: 'Hi {{lead_name}}, reminder!',
+          attachments: [
+            { fileUrl: 'https://example.com/file1.pdf' },
+            { fileUrl: 'https://example.com/file2.pdf' },
+          ],
+        },
+      },
+    },
+  })
   @ApiOperation({ summary: 'Create a new tag automation rule' })
   @ApiResponse({
     status: 201,
-    description: 'The rule has been successfully created',
-    type: ResponseTagAutomationRuleDto,
+    description: 'Rule created successfully',
   })
   create(@Body() createDto: CreateTagAutomationRuleDto) {
     return this.tagAutomationRuleService.create(createDto);
@@ -50,7 +106,6 @@ export class TagAutomationRuleController {
   @ApiResponse({
     status: 200,
     description: 'List of tag automation rules',
-    type: [ResponseTagAutomationRuleDto],
   })
   findAll(@Query('companyId', ParseIntPipe) companyId: number) {
     return this.tagAutomationRuleService.findAll(companyId);
@@ -66,7 +121,6 @@ export class TagAutomationRuleController {
   @ApiResponse({
     status: 200,
     description: 'The found tag automation rule',
-    type: ResponseTagAutomationRuleDto,
   })
   @ApiResponse({ status: 404, description: 'Tag automation rule not found' })
   findOne(@Param('id', ParseIntPipe) id: number) {
@@ -83,7 +137,6 @@ export class TagAutomationRuleController {
   @ApiResponse({
     status: 200,
     description: 'The updated tag automation rule',
-    type: ResponseTagAutomationRuleDto,
   })
   @ApiResponse({ status: 404, description: 'Tag automation rule not found' })
   update(

@@ -125,7 +125,7 @@ import {
 import { AutomationAttachmentDto } from 'src/modules/automations/communication-automation/communication-automation-rule/dto/automation-attachment.dto';
 
 export class CreateTagAutomationRuleDto {
-  @ApiProperty({ example: 'Tag Follow Up' })
+  @ApiProperty({ example: 'Post Tag Automation' })
   @IsString()
   title: string;
 
@@ -133,29 +133,24 @@ export class CreateTagAutomationRuleDto {
   @IsInt()
   companyId: number;
 
-  @ApiProperty({ example: 0 })
+  @ApiProperty({ example: 3600 })
   @IsInt()
   @IsOptional()
   timeDelay?: number;
 
-  @ApiProperty({ enum: TagConditionType })
+  @ApiProperty({ enum: TagConditionType, example: 'post_tag' })
   @IsEnum(TagConditionType)
   condition_type: TagConditionType;
 
-  @ApiProperty({ enum: PipelineType })
+  @ApiProperty({ enum: PipelineType, example: 'SALES' })
   @IsEnum(PipelineType)
   pipelineType: PipelineType;
 
-  @ApiProperty({ enum: TagRuleType })
+  @ApiProperty({ enum: TagRuleType, example: 'one_time' })
   @IsEnum(TagRuleType)
   ruleType: TagRuleType;
 
-  @ApiProperty({ example: 1 })
-  @IsInt()
-  @IsOptional()
-  targetColumnId: number;
-
-  // ✅ Required if pipelineType = sales or shop
+  //  Required if pipelineType = sales or shop
   @ApiProperty({ type: [Number], example: [1, 2] })
   @ValidateIf(
     (o) =>
@@ -167,7 +162,7 @@ export class CreateTagAutomationRuleDto {
   @IsInt({ each: true })
   tagIds: number[];
 
-  // ✅ Required only for post_tag condition
+  //  Required only for post_tag condition
   @ApiProperty({ type: [Number], example: [1, 2], required: false })
   @ValidateIf((o) => o.condition_type === TagConditionType.post_tag)
   @IsArray()
@@ -178,12 +173,19 @@ export class CreateTagAutomationRuleDto {
   @ApiProperty({
     description: 'Is automation paused',
     default: false,
+    example: 'false',
   })
   @IsBoolean()
   isPaused: boolean = false;
 
-  // ✅ Required only for communication condition
-  @ApiProperty({ enum: CommunicationType, required: false })
+  //  Required only for pipeline condition
+  @ApiProperty({ example: 1 })
+  @ValidateIf((o) => o.condition_type === TagConditionType.pipeline)
+  @IsInt()
+  targetColumnId: number;
+
+  //  Required only for communication condition
+  @ApiProperty({ enum: CommunicationType, required: false, example: 'EMAIL' })
   @ValidateIf((o) => o.condition_type === TagConditionType.communication)
   @IsEnum(CommunicationType)
   communicationType?: CommunicationType;
@@ -193,22 +195,25 @@ export class CreateTagAutomationRuleDto {
   @IsBoolean()
   isSendWeekDays?: boolean;
 
-  @ApiProperty({ example: true, required: false })
+  @ApiProperty({ example: false, required: false })
   @ValidateIf((o) => o.condition_type === TagConditionType.communication)
   @IsBoolean()
   isSendOfficeHours?: boolean;
 
   @ApiProperty({ example: 'Subject here', required: false })
+  @ValidateIf((o) => o.condition_type === TagConditionType.communication)
   @IsOptional()
   @IsString()
   subject?: string;
 
   @ApiProperty({ example: 'Email body', required: false })
+  @ValidateIf((o) => o.condition_type === TagConditionType.communication)
   @IsOptional()
   @IsString()
   emailBody?: string;
 
   @ApiProperty({ example: 'SMS body', required: false })
+  @ValidateIf((o) => o.condition_type === TagConditionType.communication)
   @IsOptional()
   @IsString()
   smsBody?: string;
@@ -217,8 +222,13 @@ export class CreateTagAutomationRuleDto {
     description: 'Attachments for the automation',
     type: [AutomationAttachmentDto],
     required: false,
+    examples: [
+      { fileUrl: 'https://example.com/file1.pdf' },
+      { fileUrl: 'https://example.com/file2.pdf' },
+    ],
   })
   @IsOptional()
+  @ValidateIf((o) => o.condition_type === TagConditionType.communication)
   @ValidateNested({ each: true })
   @Type(() => AutomationAttachmentDto)
   attachments?: AutomationAttachmentDto[];
