@@ -66,22 +66,22 @@ async function bootstrap() {
 
   // cors policy
   app.enableCors({
-    origin: '*',
-    // Allow all origins in development
-    //   (origin: string, callback) => {
-    //     const allowedOrigins = (process.env.ACCESS_CORS_ORIGINS || '').split(
-    //       ',',
-    //     );
+    origin:
+      // Allow all origins in development
+      (origin: string, callback) => {
+        const allowedOrigins = (process.env.ACCESS_CORS_ORIGINS || '').split(
+          ',',
+        );
 
-    //     if (!origin || allowedOrigins.includes(origin)) {
-    //       callback(null, true);
-    //     } else {
-    //       callback(new Error('Not allowed by CORS'));
-    //     }
-    //   },
-    // credentials: process.env.ACCESS_CORS_ALLOW_CREDENTIALS === 'true',
-    // methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    // allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+    credentials: process.env.ACCESS_CORS_ALLOW_CREDENTIALS === 'true',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
   // Setup Swagger documentation
