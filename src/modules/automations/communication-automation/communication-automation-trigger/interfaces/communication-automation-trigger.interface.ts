@@ -1,6 +1,7 @@
 import {
   CommunicationAutomationRule,
   CommunicationStage,
+  TagConditionType,
 } from '@prisma/client';
 
 export interface ICommunicationAutomationRule
@@ -21,4 +22,5 @@ export interface IScheduleTimeDelay {
   columnId: number;
   companyId: number;
   delayInSeconds: number;
+  conditionType?: TagConditionType;
 }

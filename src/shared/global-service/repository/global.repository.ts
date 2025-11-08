@@ -21,6 +21,10 @@ export class GlobalRepository {
         companyId,
       },
       ...params,
+      include: {
+        leadTags: true,
+        Client: true,
+      },
     });
     if (!lead) {
       throw new Error('Lead not found');

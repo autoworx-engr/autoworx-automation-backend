@@ -10,8 +10,8 @@ import { UpdateTagAutomationTriggerDto } from '../dto/update-tag-automation-trig
 import { TagAutomationTriggerService } from '../services/tag-automation-trigger.service';
 
 @ApiTags('tag-automation-trigger')
-// @ApiBearerAuth('JWT-auth')
-// @UseGuards(JwtAuthGuard)
+@ApiBearerAuth('JWT-auth')
+@UseGuards(JwtAuthGuard)
 @Controller('tag-automation-trigger')
 export class TagAutomationTriggerController {
   constructor(
@@ -19,16 +19,16 @@ export class TagAutomationTriggerController {
   ) {}
 
   @ApiOperation({
-    summary: 'Trigger an automation to send email/SMS to a client.',
+    summary: 'Trigger an tag automation!.',
     description:
-      'This endpoint triggers an automation rule that can send an email/SMS to a client on behalf of the company.',
+      'This endpoint triggers an tag automation rule that can update lead column, send an email/SMS or add tag to a lead on behalf of the company.',
   })
   @ApiResponse({
     status: 200,
     schema: {
       example: {
         statusCode: 200,
-        message: 'Automation triggered successfully',
+        message: 'Tag Automation triggered successfully',
       },
     },
   })

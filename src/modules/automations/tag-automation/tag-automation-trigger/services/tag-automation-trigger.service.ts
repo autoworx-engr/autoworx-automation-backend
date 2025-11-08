@@ -1,19 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { Inject, Injectable, Logger, LoggerService } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { GlobalRepository } from 'src/shared/global-service/repository/global.repository';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { InvoiceAutomationRule } from '@prisma/client';
 import { TagAutomationTriggerRepository } from '../repository/tag-automation-trigger.repository';
 import { IScheduleTimeDelay } from 'src/modules/automations/communication-automation/communication-automation-trigger/interfaces/communication-automation-trigger.interface';
 import { UpdateTagAutomationTriggerDto } from '../dto/update-tag-automation-trigger.dto';
+import { Column, Lead, TagAutomationRule } from '@prisma/client';
 
 @Injectable()
 export class TagAutomationTriggerService {
   private readonly logger: LoggerService = new Logger();
   private readonly RULE_CACHE_KEY = 'tag_automation_rule:';
   private readonly RULES_LIST_KEY = 'tag_automation_rules:list:';
-  private readonly CACHE_TTL = 3600; // 1 hour in seconds
+  private readonly CACHE_TTL = 3600;
 
   constructor(
     @InjectQueue('tag-time-delay')
@@ -29,19 +30,18 @@ export class TagAutomationTriggerService {
     companyId,
     delayInSeconds,
     leadId,
+    conditionType,
   }: IScheduleTimeDelay): Promise<{ jobId: string } | undefined> {
     try {
-      // Get the tag with column change time
-      const lead = await this.globalRepository.findVehicleById(leadId);
+      const lead = await this.globalRepository.findLeadById(leadId, companyId);
 
       if (!lead) {
         this.logger.warn('The lead not found!');
         return;
       }
 
-      const baseTime = new Date();
+      const baseTime = lead?.columnChangedAt || new Date();
 
-      // Calculate delay from the base time
       const executeAt = new Date(baseTime.getTime() + delayInSeconds * 1000);
 
       const remainingDelay = executeAt.getTime() - Date.now();
@@ -62,15 +62,16 @@ export class TagAutomationTriggerService {
           executionId: timeDelayExecution.id,
           ruleId,
           companyId,
+          leadId,
+          conditionType,
         },
         {
-          delay: actualDelayMs, // Use actual calculated delay
+          delay: actualDelayMs,
           jobId: `${timeDelayExecution.id}`,
           removeOnComplete: true,
         },
       );
 
-      // Update the record with the job ID
       await this.globalRepository.updateTimeDelayExecution(
         timeDelayExecution.id,
         job.id.toString(),
@@ -87,10 +88,100 @@ export class TagAutomationTriggerService {
     }
   }
 
+  async triggerPipelineAutomation(rule: TagAutomationRule, lead: Lead) {
+    console.log('pipeline', rule, lead);
+    // Move lead to new pipeline column
+    // await prisma.lead.update({
+    //   where: { id: lead.id },
+    //   data: { columnId: rule.tagAutomationPipeline.targetColumnId },
+    // });
+
+    await this.scheduleTimeDelay({
+      ruleId: rule.id,
+      columnId: lead.columnId!,
+      companyId: rule?.companyId,
+      leadId: lead?.id,
+      delayInSeconds:
+        (rule.timeDelay as string | number) === 'Immediate'
+          ? 0
+          : Number(rule.timeDelay ?? 0),
+      conditionType: rule?.condition_type,
+    });
+    return {
+      statusCode: 200,
+      message: 'Time delay scheduling for post tag condition successfully',
+    };
+  }
+
+  async sendAutomationCommunication(rule: TagAutomationRule, lead: Lead) {
+    console.log('communication', rule, lead);
+    // const { communicationType, subject, emailBody, smsBody } =
+    //   rule.tagAutomationCommunication;
+    // if (communicationType === "email") {
+    //   await sendEmail({
+    //     to: lead.email,
+    //     subject,
+    //     body: emailBody,
+    //   });
+    // } else if (communicationType === "sms") {
+    //   await sendSMS({
+    //     to: lead.phone,
+    //     message: smsBody,
+    //   });
+    // }
+
+    await this.scheduleTimeDelay({
+      ruleId: rule.id,
+      columnId: lead.columnId!,
+      companyId: rule?.companyId,
+      leadId: lead?.id,
+      delayInSeconds:
+        (rule.timeDelay as string | number) === 'Immediate'
+          ? 0
+          : Number(rule.timeDelay ?? 0),
+
+      conditionType: rule?.condition_type,
+    });
+    return {
+      statusCode: 200,
+      message: 'Time delay scheduling for post tag condition successfully',
+    };
+  }
+
+  async addTagsToLead(rule: TagAutomationRule, lead: Lead) {
+    console.log('post tag', rule, lead);
+    // await prisma.lead.update({
+    //   where: { id: lead.id },
+    //   data: {
+    //     tags: {
+    //       connect: tags.map((t) => ({ id: t.id })),
+    //     },
+    //   },
+    // });
+
+    await this.scheduleTimeDelay({
+      ruleId: rule.id,
+      columnId: lead.columnId!,
+      companyId: rule?.companyId,
+      leadId: lead?.id,
+      delayInSeconds:
+        (rule.timeDelay as string | number) === 'Immediate'
+          ? 0
+          : Number(rule.timeDelay ?? 0),
+      conditionType: rule?.condition_type,
+    });
+    return {
+      statusCode: 200,
+      message: 'Time delay scheduling for post tag condition successfully',
+    };
+  }
+
   // This method is used to update the tag automation trigger
   async update(body: UpdateTagAutomationTriggerDto) {
-    const { companyId, columnId, leadId } = body || {};
+    const { companyId, columnId, leadId, pipelineType } = body || {};
     this.logger.log(`Tag automation triggered for  Id ${leadId}!`);
+
+    const lead = await this.globalRepository.findLeadById(leadId, companyId);
 
     //Use cache for rules list
     const rulesCacheKey = `${this.RULES_LIST_KEY}${companyId}`;
@@ -104,7 +195,10 @@ export class TagAutomationTriggerService {
       );
     } else {
       tagAutomationRules =
-        await this.tagAutomationTriggerRepository.findAllRule(companyId);
+        await this.tagAutomationTriggerRepository.findAllRule(
+          companyId,
+          pipelineType,
+        );
 
       await this.cacheManager.set(
         rulesCacheKey,
@@ -124,40 +218,33 @@ export class TagAutomationTriggerService {
       return;
     }
 
-    const applicableRule = tagAutomationRules.find(
-      (rule: InvoiceAutomationRule) =>
-        rule?.invoiceStatusId == columnId && rule.companyId == companyId,
-    );
+    for (const rule of tagAutomationRules) {
+      // PIPELINE CONDITION
+      if (
+        rule.condition_type === 'pipeline' &&
+        rule.tagAutomationPipeline?.targetColumnId === columnId &&
+        rule.tag.some((t) => lead.leadTags.some((lt) => lt.tagId === t.id))
+      ) {
+        await this.triggerPipelineAutomation(rule, lead);
+      }
 
-    if (!applicableRule) {
-      this.logger.warn(
-        `No applicable active tag automation rule found for this !`,
-      );
-      return;
+      // COMMUNICATION CONDITION
+      else if (
+        rule.condition_type === 'communication' &&
+        rule.tag.some((t) => lead.leadTags.some((lt) => lt.tagId === t.id))
+      ) {
+        await this.sendAutomationCommunication(rule, lead);
+      }
+
+      // POSTTAG CONDITION
+      else if (
+        rule.condition_type === 'post_tag' &&
+        rule.PostTagAutomationColumn.some((postTag) =>
+          postTag?.columnIds.some((c: Column) => c?.id === columnId),
+        )
+      ) {
+        await this.addTagsToLead(rule, lead);
+      }
     }
-
-    if (applicableRule.isPaused) {
-      this.logger.warn('The rule is paused!');
-      return;
-    }
-
-    this.logger.log(
-      `Scheduling time delay for  ${leadId} with delay ${applicableRule.timeDelay} seconds`,
-    );
-
-    await this.scheduleTimeDelay({
-      ruleId: applicableRule.id,
-      columnId,
-      companyId,
-      leadId,
-      delayInSeconds:
-        applicableRule.timeDelay === 'Instant'
-          ? 0
-          : Number(applicableRule.timeDelay),
-    });
-    return {
-      statusCode: 200,
-      message: 'Time delay scheduled successfully',
-    };
   }
 }

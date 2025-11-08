@@ -25,6 +25,6 @@ export class TagTimeDelayProcessor {
 
   @Process('process-tag-time-delay')
   async processTagTimeDelay(job: Job) {
-    // const { executionId, ruleId, companyId } = job.data;
+    // const { executionId, ruleId, companyId, conditionType } = job.data;
   }
 }
