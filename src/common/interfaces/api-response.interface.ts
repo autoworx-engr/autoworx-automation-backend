@@ -27,6 +27,7 @@ export interface ITimeExecutionCreate {
   communicationRuleId?: number | null;
   serviceMaintenanceRuleId?: number | null;
   invoiceAutomationRuleId?: number | null;
+  tagAutomationRuleId?: number | null;
   leadId?: number | null;
   estimateId?: string | null;
   columnId: number;
