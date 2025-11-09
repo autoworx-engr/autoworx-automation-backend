@@ -36,10 +36,17 @@ export class TagAutomationTriggerRepository {
   }
 
   async findRuleById(ruleId: number) {
-    const result = await this.prisma.invoiceAutomationRule.findUnique({
+    const result = await this.prisma.tagAutomationRule.findUnique({
       where: { id: ruleId },
       include: {
-        attachments: true,
+        PostTagAutomationColumn: true,
+        tagAutomationPipeline: true,
+        tagAutomationCommunication: {
+          include: {
+            attachments: true,
+          },
+        },
+        tag: true,
       },
     });
 
