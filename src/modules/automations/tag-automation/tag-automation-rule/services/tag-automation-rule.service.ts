@@ -1,6 +1,6 @@
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { TagAutomationRule } from '@prisma/client'; // import your Prisma model
+import { TagAutomationRule } from '@prisma/client';
 import { CreateTagAutomationRuleDto } from '../dto/create-tag-automation-rule.dto';
 import { UpdateTagAutomationRuleDto } from '../dto/update-tag-automation-rule.dto';
 import { TagAutomationRuleRepository } from '../repositories/tag-automation-rule.repository';
@@ -8,117 +8,105 @@ import { TagAutomationRuleRepository } from '../repositories/tag-automation-rule
 @Injectable()
 export class TagAutomationRuleService {
   private readonly logger = new Logger(TagAutomationRuleService.name);
-  private readonly RULE_CACHE_KEY = 'tag_automation_rule:';
-  private readonly RULES_LIST_KEY = 'tag_automation_rules:list:';
-  private readonly CACHE_TTL = 15 * 24 * 3600; // 15 days (in seconds)
+  private readonly CACHE_TTL = 15 * 24 * 3600; // 15 days (seconds)
+  private readonly PREFIX = 'tag_automation_rule';
 
   constructor(
     private readonly tagRuleRepository: TagAutomationRuleRepository,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
-  async create(createDto: CreateTagAutomationRuleDto) {
-    const cachedKey = `${this.RULES_LIST_KEY}${createDto.companyId}`;
+  private async getVersion(): Promise<number> {
+    const version = await this.cacheManager.get<number>(
+      `${this.PREFIX}:version`,
+    );
+    return version || 1;
+  }
 
-    // Create rule with all necessary relations in one go
+  private async incrementVersion(): Promise<void> {
+    const version = await this.getVersion();
+    await this.cacheManager.set(
+      `${this.PREFIX}:version`,
+      version + 1,
+      this.CACHE_TTL,
+    );
+  }
+
+  private async buildListKey(companyId: number): Promise<string> {
+    const version = await this.getVersion();
+    return `${this.PREFIX}:list:v${version}:company:${companyId}`;
+  }
+
+  private buildRuleKey(id: number): string {
+    return `${this.PREFIX}:rule:${id}`;
+  }
+
+  async create(createDto: CreateTagAutomationRuleDto) {
     const createdRule = await this.tagRuleRepository.createRule(createDto);
 
-    await this.cacheManager.del(cachedKey);
-    this.logger.log(`Invalidated rules list cache for ${cachedKey}`);
+    await this.incrementVersion(); // Invalidate all list caches
+    const individualKey = this.buildRuleKey(createdRule.id);
+    await this.cacheManager.set(individualKey, createdRule, this.CACHE_TTL);
 
-    // Instead of calling findOne, return createdRule
-    const individualRuleCacheKey = `${this.RULE_CACHE_KEY}${createdRule.id}`;
-    await this.cacheManager.set(
-      individualRuleCacheKey,
-      JSON.stringify(createdRule),
-      this.CACHE_TTL * 1000,
-    );
-    this.logger.log(`Cached new rule at ${individualRuleCacheKey}`);
-
+    this.logger.log(`Created rule cached at ${individualKey}`);
     return createdRule;
   }
 
   async findAll(companyId: number): Promise<TagAutomationRule[]> {
-    const cachedKey = `${this.RULES_LIST_KEY}${companyId}`;
-    const cachedRules = await this.cacheManager.get<string>(cachedKey);
+    const listKey = await this.buildListKey(companyId);
+    const cachedRules =
+      await this.cacheManager.get<TagAutomationRule[]>(listKey);
 
     if (cachedRules) {
       this.logger.log(`Cache hit for company ${companyId}`);
-      return JSON.parse(cachedRules) as TagAutomationRule[];
+      return cachedRules;
     }
 
     const rules = await this.tagRuleRepository.findAllRules(companyId);
-    await this.cacheManager.set(
-      cachedKey,
-      JSON.stringify(rules),
-      this.CACHE_TTL * 1000,
-    );
-    this.logger.log(`Cached rules for company ${companyId}`);
+    await this.cacheManager.set(listKey, rules, this.CACHE_TTL);
 
+    this.logger.log(`Cache set for ${listKey}`);
     return rules;
   }
 
   async findOne(id: number): Promise<TagAutomationRule> {
-    const cachedKey = `${this.RULE_CACHE_KEY}${id}`;
-    const cachedRule = await this.cacheManager.get<string>(cachedKey);
+    const ruleKey = this.buildRuleKey(id);
+    const cachedRule = await this.cacheManager.get<TagAutomationRule>(ruleKey);
 
     if (cachedRule) {
-      return JSON.parse(cachedRule) as TagAutomationRule;
+      this.logger.log(`Cache hit for rule ${id}`);
+      return cachedRule;
     }
 
     const rule = await this.tagRuleRepository.findRuleById(id);
-    if (!rule)
-      throw new NotFoundException(
-        `Tag automation rule with ID ${id} not found`,
-      );
+    if (!rule) throw new NotFoundException(`Rule with ID ${id} not found`);
 
-    await this.cacheManager.set(
-      cachedKey,
-      JSON.stringify(rule),
-      this.CACHE_TTL * 1000,
-    );
+    await this.cacheManager.set(ruleKey, rule, this.CACHE_TTL);
     return rule;
   }
 
-  async update(
-    id: number,
-    updateDto: UpdateTagAutomationRuleDto,
-  ): Promise<TagAutomationRule> {
-    const existingRule = await this.findOne(id);
-    if (!existingRule)
-      throw new NotFoundException(`Rule with ID ${id} not found`);
+  async update(id: number, dto: UpdateTagAutomationRuleDto) {
+    const existing = await this.tagRuleRepository.findRuleById(id);
+    if (!existing) throw new NotFoundException(`Rule with ID ${id} not found`);
 
-    await this.tagRuleRepository.updateRule(id, updateDto);
-    await this.cacheManager.del(`${this.RULE_CACHE_KEY}${id}`);
-    if (existingRule.companyId) {
-      await this.cacheManager.del(
-        `${this.RULES_LIST_KEY}${existingRule.companyId}`,
-      );
-    }
+    const updated = await this.tagRuleRepository.updateRule(id, dto);
+    const ruleKey = this.buildRuleKey(id);
 
-    const updatedRule = await this.findOne(id);
-    const individualRuleCacheKey = `${this.RULE_CACHE_KEY}${id}`;
+    await this.cacheManager.del(ruleKey);
+    await this.incrementVersion(); // ensures new findAll() fetches fresh data
+    await this.cacheManager.set(ruleKey, updated, this.CACHE_TTL);
 
-    await this.cacheManager.set(
-      individualRuleCacheKey,
-      JSON.stringify(updatedRule),
-      this.CACHE_TTL * 1000,
-    );
-    this.logger.log(`Updated cache for ${individualRuleCacheKey}`);
-
-    return updatedRule;
+    this.logger.log(`Updated and recached rule ${id}`);
+    return updated;
   }
 
   async remove(id: number): Promise<{ id: number; message: string }> {
-    const existingRule = await this.tagRuleRepository.findRuleById(id);
-    if (!existingRule)
-      throw new NotFoundException(`Rule with ID ${id} not found`);
+    const existing = await this.tagRuleRepository.findRuleById(id);
+    if (!existing) throw new NotFoundException(`Rule with ID ${id} not found`);
 
-    const rule = await this.tagRuleRepository.deleteRule(id);
-    await this.cacheManager.del(`${this.RULE_CACHE_KEY}${id}`);
-    if (rule.id) {
-      await this.cacheManager.del(`${this.RULES_LIST_KEY}${rule.id}`);
-    }
+    await this.tagRuleRepository.deleteRule(id);
+    await this.cacheManager.del(this.buildRuleKey(id));
+    await this.incrementVersion();
 
     return { id, message: 'Tag automation rule deleted successfully' };
   }

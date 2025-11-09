@@ -10,11 +10,7 @@ import { UpdateTagAutomationRuleDto } from '../dto/update-tag-automation-rule.dt
 @Injectable()
 export class TagAutomationRuleRepository {
   constructor(private readonly prisma: PrismaService) {}
-
-  // -------------------------------------------------------
   //  CREATE RULE — handles all automation condition types
-  // -------------------------------------------------------
-
   async createRule(dto: CreateTagAutomationRuleDto) {
     const {
       condition_type,
@@ -36,7 +32,6 @@ export class TagAutomationRuleRepository {
       targetColumnId,
     } = dto;
 
-    // --- Basic validation ---
     if (!companyId) throw new BadRequestException('CompanyId is required');
     if (!condition_type)
       throw new BadRequestException('condition_type is required');
@@ -134,24 +129,6 @@ export class TagAutomationRuleRepository {
     });
 
     if (condition_type === 'communication' && communicationType) {
-      // await this.prisma.tagAutomationCommunication.create({
-      //   data: {
-      //     communicationType,
-      //     isSendWeekDays,
-      //     isSendOfficeHours,
-      //     emailBody,
-      //     smsBody,
-      //     subject,
-      //     tagAutomationId: tagAutomationRuleData?.id,
-      //     attachments: attachments?.length
-      //       ? { create: attachments.map(({ fileUrl }) => ({ fileUrl })) }
-      //       : undefined,
-      //   },
-      //   include: {
-      //     attachments: true,
-      //   },
-      // });
-
       const communicationRecord =
         await this.prisma.tagAutomationCommunication.create({
           data: {
@@ -181,13 +158,11 @@ export class TagAutomationRuleRepository {
         },
         include: {
           column: true,
-          // tagAutomation: true,
         },
       });
 
       // Attach it manually to the main rule object
       tagAutomationRuleData.tagAutomationPipeline = pipeline;
-      // console.log('Created pipeline:', pipeline);
     }
 
     if (condition_type === 'post_tag' && validColumns.length) {
@@ -203,16 +178,12 @@ export class TagAutomationRuleRepository {
           tagAutomation: { include: { tag: true } },
         },
       });
-      // console.log('Created PostTagAutomationColumn:', postTagColumn);
       return postTagColumn;
     }
 
     return tagAutomationRuleData;
   }
-
-  // -------------------------------------------------------
   //  FIND ALL
-  // -------------------------------------------------------
   async findAllRules(companyId: number) {
     return this.prisma.tagAutomationRule.findMany({
       where: { companyId },
@@ -225,10 +196,7 @@ export class TagAutomationRuleRepository {
       orderBy: { createdAt: 'desc' },
     });
   }
-
-  // -------------------------------------------------------
   //  FIND BY ID
-  // -------------------------------------------------------
   async findRuleById(id: number) {
     return this.prisma.tagAutomationRule.findUnique({
       where: { id },
@@ -240,11 +208,7 @@ export class TagAutomationRuleRepository {
       },
     });
   }
-
-  // -------------------------------------------------------
   //  UPDATE
-  // -------------------------------------------------------
-
   async updateRule(id: number, updateDto: UpdateTagAutomationRuleDto) {
     const {
       tagIds,
@@ -276,10 +240,7 @@ export class TagAutomationRuleRepository {
           `Tag automation rule with ID ${id} not found`,
         );
       }
-
-      // --------------------------
       // Update tags if provided
-      // --------------------------
       if (tagIds) {
         await prisma.tagAutomationRule.update({
           where: { id },
@@ -290,10 +251,7 @@ export class TagAutomationRuleRepository {
           },
         });
       }
-
-      // --------------------------
       // Update communication condition
-      // --------------------------
       if (
         existingRule.condition_type === 'communication' &&
         (communicationType || attachments)
@@ -331,10 +289,7 @@ export class TagAutomationRuleRepository {
           },
         });
       }
-
-      // --------------------------
       // Update pipeline condition
-      // --------------------------
       if (existingRule.condition_type === 'pipeline' && targetColumnId) {
         await prisma.tagAutomationPipeline.update({
           where: { id: existingRule.tagAutomationPipeline?.id },
@@ -343,30 +298,27 @@ export class TagAutomationRuleRepository {
           },
         });
       }
-
-      // --------------------------
       // Update post_tag condition
-      // --------------------------
-      if (existingRule.condition_type === 'post_tag' && columnIds) {
+
+      if (existingRule.condition_type === 'post_tag' && columnIds?.length) {
         // Delete old post_tag columns
         await prisma.postTagAutomationColumn.deleteMany({
           where: { tagAutomationId: id },
         });
 
         // Add new columns
-        if (columnIds.length) {
-          await prisma.postTagAutomationColumn.createMany({
-            data: columnIds.map((cid) => ({
+        for (const cid of columnIds) {
+          await prisma.postTagAutomationColumn.create({
+            data: {
               tagAutomationId: id,
-              columnIdsId: cid, // make sure your Prisma field name is correct
-            })),
+              columnIds: {
+                connect: [{ id: cid }],
+              },
+            },
           });
         }
       }
-
-      // --------------------------
       // Update main rule
-      // --------------------------
       const updatedRule = await prisma.tagAutomationRule.update({
         where: { id },
         data: updateData,
@@ -374,17 +326,18 @@ export class TagAutomationRuleRepository {
           tag: true,
           tagAutomationCommunication: true,
           tagAutomationPipeline: true,
-          PostTagAutomationColumn: true,
+          PostTagAutomationColumn: {
+            include: {
+              columnIds: true,
+            },
+          },
         },
       });
 
       return updatedRule;
     });
   }
-
-  // -------------------------------------------------------
   //  DELETE
-  // -------------------------------------------------------
   async deleteRule(id: number) {
     return this.prisma.$transaction(async (prisma) => {
       const existingRule = await prisma.tagAutomationRule.findUnique({
@@ -402,10 +355,7 @@ export class TagAutomationRuleRepository {
           `Tag automation rule with ID ${id} not found`,
         );
       }
-
-      // --------------------------
       // Delete attachments for communication
-      // --------------------------
       if (
         existingRule.condition_type === 'communication' &&
         existingRule.tagAutomationCommunication?.id
@@ -420,10 +370,7 @@ export class TagAutomationRuleRepository {
           where: { id: existingRule.tagAutomationCommunication.id },
         });
       }
-
-      // --------------------------
       // Delete pipeline record
-      // --------------------------
       if (
         existingRule.condition_type === 'pipeline' &&
         existingRule.tagAutomationPipeline?.id
@@ -432,19 +379,13 @@ export class TagAutomationRuleRepository {
           where: { id: existingRule.tagAutomationPipeline.id },
         });
       }
-
-      // --------------------------
       // Delete post_tag columns
-      // --------------------------
       if (existingRule.condition_type === 'post_tag') {
         await prisma.postTagAutomationColumn.deleteMany({
           where: { tagAutomationId: id },
         });
       }
-
-      // --------------------------
       // Finally delete main tag automation rule
-      // --------------------------
       await prisma.tagAutomationRule.delete({
         where: { id },
       });
