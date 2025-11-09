@@ -89,6 +89,11 @@ async function main() {
       permission_name: 'serviceAutomation',
       status: true,
     },
+    {
+      title: 'Tag Automation',
+      permission_name: 'tagAutomation',
+      status: true,
+    },
   ];
 
   const companies = await prisma.company.findMany();
