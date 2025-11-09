@@ -303,7 +303,7 @@ model TagAutomationRule {
   companyId                  Int
   title                      String
   timeDelay                  Int                         @default(0) // in seconds
-  isPaused           Boolean                @default(false)
+  isPaused                   Boolean                     @default(false)
   condition_type             TagConditionType
   pipelineType               PipelineType
   ruleType                   TagRuleType?
@@ -331,8 +331,8 @@ model TagAutomationCommunication {
   id                Int                    @id @default(autoincrement())
   tagAutomationId   Int                    @unique
   communicationType CommunicationType
-  isSendWeekDays     Boolean                @default(false)
-  isSendOfficeHours  Boolean                @default(false)
+  isSendWeekDays    Boolean                @default(false)
+  isSendOfficeHours Boolean                @default(false)
   subject           String?
   emailBody         String?                @db.Text
   smsBody           String?                @db.Text
@@ -345,12 +345,13 @@ model TagAutomationCommunication {
 }
 
 model PostTagAutomationColumn {
-  id              Int      @id @default(autoincrement())
+  id              Int               @id @default(autoincrement())
   tagAutomationId Int
-  columnIds                    Column[]
-  tagAutomation TagAutomationRule @relation(fields: [tagAutomationId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt
+  columnIds       Column[]
+  tagAutomation   TagAutomationRule @relation(fields: [tagAutomationId], references: [id], onDelete: Cascade)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now()) @updatedAt
+
   @@index([tagAutomationId])
 }
 
@@ -720,34 +721,34 @@ enum EmailTemplateType {
 }
 
 model Lead {
-  id                  Int        @id @default(autoincrement())
-  clientName          String     @map("client_name")
-  clientEmail         String?    @map("client_email")
-  clientPhone         String?    @map("client_phone")
-  vehicleInfo         String     @map("vehicle_info")
+  id                  Int                  @id @default(autoincrement())
+  clientName          String               @map("client_name")
+  clientEmail         String?              @map("client_email")
+  clientPhone         String?              @map("client_phone")
+  vehicleInfo         String               @map("vehicle_info")
   vehicleId           Int?
   services            String
   source              String
   comments            String?
-  companyId           Int        @map("company_id")
-  createdAt           DateTime   @default(now()) @map("created_at")
-  updatedAt           DateTime   @default(now()) @updatedAt @map("updated_at")
-  columnChangedAt     DateTime?  @map("column_changed_at")
-  company             Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  columnId            Int?       @map("column_id")
-  column              Column?    @relation(fields: [columnId], references: [id], onDelete: Cascade)
-  assignedSalesUserId Int?       @map("assigned_sales_id")
-  assignedDate        DateTime?  @map("assigned_date")
-  salesUser           User?      @relation(fields: [assignedSalesUserId], references: [id], onDelete: Cascade)
-  isLead              Boolean    @default(true)
-  isQualified         Boolean    @default(true)
-  isEstimateCreated   Boolean?   @default(false)
+  companyId           Int                  @map("company_id")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @default(now()) @updatedAt @map("updated_at")
+  columnChangedAt     DateTime?            @map("column_changed_at")
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  columnId            Int?                 @map("column_id")
+  column              Column?              @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  assignedSalesUserId Int?                 @map("assigned_sales_id")
+  assignedDate        DateTime?            @map("assigned_date")
+  salesUser           User?                @relation(fields: [assignedSalesUserId], references: [id], onDelete: Cascade)
+  isLead              Boolean              @default(true)
+  isQualified         Boolean              @default(true)
+  isEstimateCreated   Boolean?             @default(false)
   tasks               Task[]
   leadTags            LeadTags[]
   serviceId           Int?
-  Service             Service?   @relation(fields: [serviceId], references: [id])
+  Service             Service?             @relation(fields: [serviceId], references: [id])
   clientId            Int?
-
+  isTriggered         Boolean              @default(false)
   Client              Client[]
   TimeDelayExecutions TimeDelayExecution[]
 
