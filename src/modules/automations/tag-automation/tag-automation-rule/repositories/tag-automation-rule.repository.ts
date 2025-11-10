@@ -172,7 +172,11 @@ export class TagAutomationRuleRepository {
         tagAutomationCommunication: { include: { attachments: true } },
         tag: true,
         tagAutomationPipeline: true,
-        PostTagAutomationColumn: true,
+        PostTagAutomationColumn: {
+          include: {
+            columnIds: true,
+          },
+        },
       },
     });
 
