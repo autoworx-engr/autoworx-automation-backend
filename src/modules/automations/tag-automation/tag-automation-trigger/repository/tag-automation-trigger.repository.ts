@@ -1,6 +1,6 @@
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PipelineType } from '@prisma/client';
+import { PipelineType, TagConditionType } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -11,12 +11,17 @@ export class TagAutomationTriggerRepository {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  async findAllRule(companyId: number, pipelineType: PipelineType) {
+  async findAllRule(
+    companyId: number,
+    pipelineType: PipelineType,
+    conditionType: TagConditionType,
+  ) {
     const result = await this.prisma.tagAutomationRule.findMany({
       where: {
         companyId: companyId,
         isPaused: false,
         pipelineType: pipelineType,
+        condition_type: conditionType,
       },
       include: {
         tag: true,

@@ -232,6 +232,50 @@ export class GlobalRepository {
     });
     return updatedLead;
   }
+  async updatePipelineInvoiceTags({
+    companyId,
+    invoiceId,
+    tags,
+  }: {
+    companyId: number;
+    invoiceId: string;
+    tags: number[];
+  }): Promise<Invoice> {
+    const findLead = await this.prisma.invoice.findUnique({
+      where: {
+        id: invoiceId,
+        companyId,
+      },
+    });
+
+    if (!findLead) {
+      throw new NotFoundException('Lead not found');
+    }
+
+    // Update the lead with new column and track the column change time
+    const updatedLead = await this.prisma.invoice.update({
+      where: {
+        id: invoiceId,
+        companyId,
+      },
+      data: {
+        tags: {
+          createMany: {
+            data: tags.map((tagId) => ({
+              tagId,
+            })),
+            skipDuplicates: true,
+          },
+        },
+      },
+      include: {
+        tags: true,
+        client: true,
+      },
+    });
+    return updatedLead;
+  }
+
   async updateEstimateColumn({
     companyId,
     estimateId,

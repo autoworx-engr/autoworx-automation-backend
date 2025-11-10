@@ -5,9 +5,9 @@ import { Queue } from 'bull';
 import { GlobalRepository } from 'src/shared/global-service/repository/global.repository';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { TagAutomationTriggerRepository } from '../repository/tag-automation-trigger.repository';
-import { IScheduleTimeDelay } from 'src/modules/automations/communication-automation/communication-automation-trigger/interfaces/communication-automation-trigger.interface';
+import { IScheduleTimeDelayTagAutomation } from 'src/modules/automations/communication-automation/communication-automation-trigger/interfaces/communication-automation-trigger.interface';
 import { UpdateTagAutomationTriggerDto } from '../dto/update-tag-automation-trigger.dto';
-import { Column, Lead, TagAutomationRule } from '@prisma/client';
+import { Column, Invoice, Lead, TagAutomationRule } from '@prisma/client';
 import moment from 'moment';
 import { CommunicationAutomationTriggerRepository } from 'src/modules/automations/communication-automation/communication-automation-trigger/repository/communication-automation-trigger.repository';
 import { TagAutomationRuleWithRelations } from 'src/common/types/tagAutomationRule';
@@ -36,16 +36,37 @@ export class TagAutomationTriggerService {
     delayInSeconds,
     leadId,
     conditionType,
-  }: IScheduleTimeDelay): Promise<{ jobId: string } | undefined> {
+    invoiceId,
+  }: IScheduleTimeDelayTagAutomation): Promise<{ jobId: string } | undefined> {
     try {
-      const lead = await this.globalRepository.findLeadById(leadId, companyId);
+      let lead;
+      let invoice: Invoice | null = null;
+      let baseTime;
 
-      if (!lead) {
-        this.logger.warn('The lead not found!');
-        return;
+      if (invoiceId) {
+        invoice = await this.globalRepository.findInvoiceById(
+          invoiceId,
+          companyId,
+          'Invoice',
+        );
+
+        if (!invoice) {
+          this.logger.warn('The invoice not found!');
+          return;
+        }
+
+        baseTime = invoice?.columnChangedAt || new Date();
       }
+      if (leadId) {
+        lead = await this.globalRepository.findLeadById(leadId, companyId);
 
-      const baseTime = lead?.columnChangedAt || new Date();
+        if (!lead) {
+          this.logger.warn('The lead not found!');
+          return;
+        }
+
+        baseTime = lead?.columnChangedAt || new Date();
+      }
 
       const executeAt = new Date(baseTime.getTime() + delayInSeconds * 1000);
 
@@ -95,14 +116,16 @@ export class TagAutomationTriggerService {
 
   async triggerPipelineAutomation(
     rule: TagAutomationRule,
-    lead: Lead,
     tagId: number,
+    lead?: Lead,
+    invoice?: Invoice,
   ) {
     await this.scheduleTimeDelay({
       ruleId: rule.id,
-      columnId: lead.columnId!,
+      columnId: invoice ? invoice.columnId! : (lead?.columnId as number),
       companyId: rule?.companyId,
       leadId: lead?.id,
+      invoiceId: invoice?.id,
       delayInSeconds:
         (rule.timeDelay as string | number) === 'Immediate'
           ? 0
@@ -118,8 +141,9 @@ export class TagAutomationTriggerService {
 
   async sendAutomationCommunication(
     rule: TagAutomationRuleWithRelations,
-    lead: Lead,
     tagId: number,
+    lead?: Lead,
+    invoice?: Invoice,
   ) {
     const eligibleRules: TagAutomationRuleWithRelations[] = [];
     const rulesToReschedule: TagAutomationRuleWithRelations[] = [];
@@ -157,15 +181,22 @@ export class TagAutomationTriggerService {
 
     // ---Step 2: Execute or schedule eligible rules immediately ---
     for (const rule of eligibleRules) {
-      this.logger.log(
-        `Scheduling TagAutomation for lead ${lead.id} immediately with delay ${rule.timeDelay} seconds.`,
-      );
+      if (invoice) {
+        this.logger.log(
+          `Scheduling TagAutomation for lead ${invoice?.id} immediately with delay ${rule.timeDelay} seconds.`,
+        );
+      } else {
+        this.logger.log(
+          `Scheduling TagAutomation for lead ${lead?.id} immediately with delay ${rule.timeDelay} seconds.`,
+        );
+      }
 
       const result = await this.scheduleTimeDelay({
         ruleId: rule.id,
-        columnId: lead.columnId!,
+        columnId: invoice ? invoice.columnId! : (lead?.columnId as number),
         companyId: rule.companyId,
-        leadId: lead.id,
+        leadId: lead?.id,
+        invoiceId: invoice?.id,
         delayInSeconds:
           (rule.timeDelay as string | number) === 'Immediate'
             ? 0
@@ -197,8 +228,8 @@ export class TagAutomationTriggerService {
         const timeDelayExecution =
           await this.globalRepository.createTimeDelayExecution({
             tagAutomationRuleId: rule.id,
-            leadId: lead.id,
-            columnId: lead.columnId!,
+            leadId: lead?.id,
+            columnId: invoice ? invoice.columnId! : (lead?.columnId as number),
             executeAt: nextValidTime,
           });
 
@@ -207,8 +238,9 @@ export class TagAutomationTriggerService {
           {
             executionId: timeDelayExecution.id,
             ruleId: rule.id,
-            leadId: lead.id,
-            columnId: lead.columnId!,
+            leadId: lead?.id,
+            invoiceId: invoice?.id,
+            columnId: invoice ? invoice.columnId! : (lead?.columnId as number),
             companyId: rule.companyId,
             tagId,
             conditionType: rule?.condition_type,
@@ -243,12 +275,13 @@ export class TagAutomationTriggerService {
     };
   }
 
-  async addTagsToLead(rule: TagAutomationRule, lead: Lead) {
+  async addTagsToLead(rule: TagAutomationRule, lead?: Lead, invoice?: Invoice) {
     await this.scheduleTimeDelay({
       ruleId: rule.id,
-      columnId: lead.columnId!,
+      columnId: invoice ? invoice.columnId! : (lead?.columnId as number),
       companyId: rule?.companyId,
       leadId: lead?.id,
+      invoiceId: invoice?.id,
       delayInSeconds:
         (rule.timeDelay as string | number) === 'Immediate'
           ? 0
@@ -263,38 +296,72 @@ export class TagAutomationTriggerService {
 
   // This method is used to update the tag automation trigger
   async update(body: UpdateTagAutomationTriggerDto) {
-    const { companyId, columnId, leadId, pipelineType, tagId } = body || {};
-    this.logger.log(`Tag automation triggered for  Id ${leadId}!`);
+    const {
+      companyId,
+      columnId,
+      leadId,
+      pipelineType,
+      tagId,
+      conditionType,
+      invoiceId,
+    } = body || {};
 
-    const lead = await this.globalRepository.findLeadById(leadId, companyId);
-
-    //Use cache for rules list
-    const rulesCacheKey = `${this.RULES_LIST_KEY}${companyId}`;
-    const cachedRules = await this.cacheManager.get<string>(rulesCacheKey);
-
-    let tagAutomationRules: any[] | null = null;
-    if (cachedRules) {
-      tagAutomationRules = JSON.parse(cachedRules);
+    if (invoiceId) {
       this.logger.log(
-        `Loaded tag automation rules from cache: ${rulesCacheKey}`,
+        `Tag automation triggered for invoice Id ${invoiceId}, pipeline type is ${pipelineType} and condition type is ${conditionType}!`,
       );
     } else {
-      tagAutomationRules =
-        await this.tagAutomationTriggerRepository.findAllRule(
-          companyId,
-          pipelineType,
-        );
-
-      await this.cacheManager.set(
-        rulesCacheKey,
-        JSON.stringify(tagAutomationRules),
-        this.CACHE_TTL * 1000,
-      );
-
       this.logger.log(
-        `Cache set for tag automation rules trigger: ${rulesCacheKey}`,
+        `Tag automation triggered for lead Id ${leadId}, pipeline type is ${pipelineType} and condition type is ${conditionType}!!`,
       );
     }
+
+    let lead;
+    let invoice;
+
+    if (invoiceId) {
+      invoice = await this.globalRepository.findInvoiceById(
+        invoiceId,
+        companyId,
+        'Invoice',
+      );
+    } else {
+      lead = await this.globalRepository.findLeadById(leadId, companyId);
+    }
+
+    //Use cache for rules list
+    // const rulesCacheKey = `${this.RULES_LIST_KEY}${companyId}`;
+    // const cachedRules = await this.cacheManager.get<string>(rulesCacheKey);
+
+    const tagAutomationRules =
+      await this.tagAutomationTriggerRepository.findAllRule(
+        companyId,
+        pipelineType,
+        conditionType,
+      );
+    // if (cachedRules) {
+    //   tagAutomationRules = JSON.parse(cachedRules);
+    //   this.logger.log(
+    //     `Loaded tag automation rules from cache: ${rulesCacheKey}`,
+    //   );
+    // } else {
+    //   tagAutomationRules =
+    //     await this.tagAutomationTriggerRepository.findAllRule(
+    //       companyId,
+    //       pipelineType,
+    //       conditionType,
+    //     );
+
+    //   await this.cacheManager.set(
+    //     rulesCacheKey,
+    //     JSON.stringify(tagAutomationRules),
+    //     this.CACHE_TTL * 1000,
+    //   );
+
+    //   this.logger.log(
+    //     `Cache set for tag automation rules trigger: ${rulesCacheKey}`,
+    //   );
+    // }
 
     if (!tagAutomationRules || tagAutomationRules.length === 0) {
       this.logger.warn(
@@ -312,7 +379,11 @@ export class TagAutomationTriggerService {
         rule.tagAutomationPipeline?.targetColumnId &&
         rule.tag.some((t) => t.id === tagId)
       ) {
-        await this.triggerPipelineAutomation(rule, lead, tagId);
+        if (invoiceId) {
+          await this.triggerPipelineAutomation(rule, tagId, invoice);
+        } else {
+          await this.triggerPipelineAutomation(rule, tagId, lead);
+        }
       }
 
       // COMMUNICATION CONDITION
@@ -321,7 +392,11 @@ export class TagAutomationTriggerService {
         rule.condition_type === 'communication' &&
         rule.tag.some((t) => t.id === tagId)
       ) {
-        await this.sendAutomationCommunication(rule, lead, tagId);
+        if (invoiceId) {
+          await this.sendAutomationCommunication(rule as any, tagId, invoice);
+        } else {
+          await this.sendAutomationCommunication(rule as any, tagId, lead);
+        }
       }
 
       // POSTTAG CONDITION
@@ -332,7 +407,11 @@ export class TagAutomationTriggerService {
           postTag?.columnIds.some((c: Column) => c?.id === columnId),
         )
       ) {
-        await this.addTagsToLead(rule, lead);
+        if (invoiceId) {
+          await this.addTagsToLead(rule, invoice);
+        } else {
+          await this.addTagsToLead(rule, lead);
+        }
       }
     }
   }

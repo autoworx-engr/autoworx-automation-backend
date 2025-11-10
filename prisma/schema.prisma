@@ -1297,6 +1297,7 @@ model Invoice {
   policy                  String?
   customerNotes           String?
   customerComments        String?
+  isTriggered             Boolean                   @default(false)
   companyId               Int                       @map("company_id")
   userId                  Int?                      @map("user_id")
   assignedToId            Int?                      @map("assigned_to")

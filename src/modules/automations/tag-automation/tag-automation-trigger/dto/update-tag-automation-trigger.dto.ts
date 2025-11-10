@@ -1,6 +1,6 @@
 import { IsEnum, IsNumber, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { PipelineType } from '@prisma/client';
+import { PipelineType, TagConditionType } from '@prisma/client';
 
 export class UpdateTagAutomationTriggerDto {
   @ApiProperty({
@@ -15,11 +15,22 @@ export class UpdateTagAutomationTriggerDto {
   @ApiProperty({
     description: 'This is lead ID',
     example: '13489758',
-    type: String,
+    type: Number,
     required: true,
   })
   @IsNumber({}, { message: 'Lead Id must be a number' })
+  @IsOptional()
   leadId: number;
+
+  @ApiProperty({
+    description: 'This is invoice ID',
+    example: '13489758',
+    type: String,
+    required: true,
+  })
+  @IsNumber({}, { message: 'Invoice Id must be a number' })
+  @IsOptional()
+  invoiceId: string;
 
   @ApiProperty({
     description: 'This is column ID',
@@ -44,4 +55,8 @@ export class UpdateTagAutomationTriggerDto {
   @ApiProperty({ enum: PipelineType, example: 'SALES' })
   @IsEnum(PipelineType)
   pipelineType: PipelineType;
+
+  @ApiProperty({ enum: TagConditionType, example: 'pipeline' })
+  @IsEnum(TagConditionType)
+  conditionType: TagConditionType;
 }

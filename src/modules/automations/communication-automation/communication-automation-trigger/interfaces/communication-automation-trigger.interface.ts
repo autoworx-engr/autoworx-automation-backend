@@ -25,3 +25,14 @@ export interface IScheduleTimeDelay {
   conditionType?: TagConditionType;
   tagId?: number;
 }
+
+export interface IScheduleTimeDelayTagAutomation {
+  ruleId: number;
+  leadId?: number;
+  invoiceId?: string;
+  columnId: number;
+  companyId: number;
+  delayInSeconds: number;
+  conditionType?: TagConditionType;
+  tagId?: number;
+}
