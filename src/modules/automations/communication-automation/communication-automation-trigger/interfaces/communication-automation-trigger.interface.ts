@@ -23,4 +23,5 @@ export interface IScheduleTimeDelay {
   companyId: number;
   delayInSeconds: number;
   conditionType?: TagConditionType;
+  tagId?: number;
 }

@@ -5,6 +5,8 @@ import { TagAutomationTriggerRepository } from './repository/tag-automation-trig
 import { TagAutomationTriggerService } from './services/tag-automation-trigger.service';
 import { TagTimeDelayProcessor } from './processors/tag-automation-time-delay-processor';
 import { TagAutomationTriggerController } from './controllers/tag-automation-trigger.controller';
+import { CommunicationAutomationTriggerRepository } from '../../communication-automation/communication-automation-trigger/repository/communication-automation-trigger.repository';
+import { GlobalRepository } from 'src/shared/global-service/repository/global.repository';
 
 @Module({
   imports: [
@@ -23,7 +25,9 @@ import { TagAutomationTriggerController } from './controllers/tag-automation-tri
     TagAutomationTriggerRepository,
     TagAutomationTriggerService,
     TagTimeDelayProcessor,
+    CommunicationAutomationTriggerRepository,
+    GlobalRepository,
   ],
   exports: [TagAutomationTriggerRepository, TagAutomationTriggerService],
 })
-export class InvoiceAutomationTriggerModule {}
+export class TagAutomationTriggerModule {}

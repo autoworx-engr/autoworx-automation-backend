@@ -98,7 +98,7 @@ export class GlobalRepository {
     communicationRuleId = null,
     serviceMaintenanceRuleId = null,
     invoiceAutomationRuleId = null,
-    tagAutomationRuleId,
+    tagAutomationRuleId = null,
     leadId = null,
     estimateId = null,
     columnId,
