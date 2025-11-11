@@ -92,6 +92,7 @@ export class TagAutomationTriggerService {
           leadId,
           conditionType,
           tagId,
+          invoiceId,
         },
         {
           delay: actualDelayMs,
@@ -362,34 +363,53 @@ export class TagAutomationTriggerService {
     for (const rule of tagAutomationRules) {
       // PIPELINE CONDITION
 
-      if (
-        rule.condition_type === 'pipeline' &&
-        tagId &&
-        rule.tagAutomationPipeline?.targetColumnId &&
-        rule.tag.some((t) => t.id === tagId)
-      ) {
-        if (invoiceId) {
-          await this.triggerPipelineAutomation(rule, tagId, invoice);
-        } else {
-          await this.triggerPipelineAutomation(rule, tagId, lead);
+      if (tagId) {
+        if (
+          rule.condition_type === 'pipeline' &&
+          tagId &&
+          rule.tagAutomationPipeline?.targetColumnId &&
+          rule.tag.some((t) => t.id === tagId)
+        ) {
+          if (invoiceId) {
+            this.logger.log(
+              `The tag automation trigger with pipeline condition in shop pipeline in invoice ${invoiceId}`,
+            );
+            await this.triggerPipelineAutomation(
+              rule,
+              tagId,
+              undefined,
+              invoice,
+            );
+          } else {
+            this.logger.log(
+              `The tag automation trigger with pipeline condition in shop pipeline in invoice ${invoiceId}`,
+            );
+            await this.triggerPipelineAutomation(rule, tagId, lead, undefined);
+          }
         }
-      }
 
-      // COMMUNICATION CONDITION
-      else if (
-        tagId &&
-        rule.condition_type === 'communication' &&
-        rule.tag.some((t) => t.id === tagId)
-      ) {
-        if (invoiceId) {
-          await this.sendAutomationCommunication(rule as any, tagId, invoice);
-        } else {
-          await this.sendAutomationCommunication(rule as any, tagId, lead);
+        // COMMUNICATION CONDITION
+        if (
+          tagId &&
+          rule.condition_type === 'communication' &&
+          rule.tag.some((t) => t.id === tagId)
+        ) {
+          if (invoiceId) {
+            this.logger.log(
+              `The tag automation trigger with communication condition in shop pipeline in invoice ${invoiceId}`,
+            );
+            await this.sendAutomationCommunication(rule as any, tagId, invoice);
+          } else {
+            this.logger.log(
+              `The tag automation trigger with communication condition in shop pipeline in invoice ${invoiceId}`,
+            );
+            await this.sendAutomationCommunication(rule as any, tagId, lead);
+          }
         }
       }
 
       // POSTTAG CONDITION
-      else if (
+      if (
         rule.condition_type === 'post_tag' &&
         !tagId &&
         rule.PostTagAutomationColumn?.columnIds.some(
@@ -401,7 +421,12 @@ export class TagAutomationTriggerService {
         } else {
           await this.addTagsToLead(rule, lead);
         }
+        return;
       }
+
+      this.logger.warn(
+        'The Lead/Invoice does not match any tag automation rule for post tag condition!',
+      );
     }
   }
 

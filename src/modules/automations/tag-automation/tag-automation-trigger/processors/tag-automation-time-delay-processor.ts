@@ -101,7 +101,6 @@ export class TagTimeDelayProcessor {
         rule?.tagAutomationPipeline?.targetColumnId
       ) {
         if (invoiceId && rule?.pipelineType === 'SHOP') {
-          console.log('invoice and shop pipeline');
           const updateInvoiceColumnId =
             await this.globalRepository.updateEstimateColumn({
               companyId,
@@ -109,23 +108,24 @@ export class TagTimeDelayProcessor {
               targetedColumnId: rule?.tagAutomationPipeline?.targetColumnId,
             });
 
-          console.log(
-            'tag pipeline automation trigger successfully',
-            updateInvoiceColumnId,
-          );
+          if (updateInvoiceColumnId) {
+            this.logger.log(
+              `The tag automation condition pipeline with shop successfully, invoice id ${invoiceId}`,
+            );
+          }
         }
         if (leadId && rule?.pipelineType === 'SALES') {
-          console.log('lead and sales pipeline');
           const updateLeadColumnId =
             await this.globalRepository.updatePipelineLeadColumn({
               companyId,
               leadId,
               targetedColumnId: rule?.tagAutomationPipeline?.targetColumnId,
             });
-          console.log(
-            'tag pipeline automation trigger successfully',
-            updateLeadColumnId,
-          );
+          if (updateLeadColumnId) {
+            this.logger.log(
+              `The tag automation condition pipeline with sales successfully, lead id ${leadId}`,
+            );
+          }
         }
 
         return {
@@ -187,9 +187,12 @@ export class TagTimeDelayProcessor {
                     {
                       executionId,
                       ruleId,
-                      leadId,
                       columnId: execution.columnId,
                       companyId,
+                      leadId,
+                      conditionType,
+                      tagId,
+                      invoiceId,
                     },
                     {
                       delay: delayMs,
@@ -205,6 +208,10 @@ export class TagTimeDelayProcessor {
                       ruleId,
                       columnId: execution.columnId,
                       companyId,
+                      leadId,
+                      conditionType,
+                      tagId,
+                      invoiceId,
                     },
                     {
                       delay: delayMs,
@@ -445,11 +452,12 @@ export class TagTimeDelayProcessor {
           const existingTagIds = leadTags.map((t: LeadTags) => t.tagId);
           const ruleTagIds = ruleTags.map((t) => t.id);
 
+          console.log('existingTagIds', existingTagIds);
           // Step 2: find missing tags
           const missingTagIds = ruleTagIds.filter(
             (id) => !existingTagIds.includes(id),
           );
-
+          console.log('missingTagIds', missingTagIds);
           if (missingTagIds.length > 0) {
             const updatedLead =
               await this.globalRepository.updatePipelineLeadTags({
@@ -457,7 +465,7 @@ export class TagTimeDelayProcessor {
                 companyId,
                 tags: missingTagIds,
               });
-
+            console.log('updatedLead', updatedLead);
             if (updatedLead) {
               this.logger.log(
                 `The tag automation post tag created on lead: ${lead?.id} id!`,

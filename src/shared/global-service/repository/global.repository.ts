@@ -224,12 +224,14 @@ export class GlobalRepository {
             skipDuplicates: true,
           },
         },
+        isTriggered: true,
       },
       include: {
         leadTags: true,
         Client: true,
       },
     });
+    console.log('updatedLead', updatedLead);
     return updatedLead;
   }
   async updatePipelineInvoiceTags({
@@ -267,6 +269,7 @@ export class GlobalRepository {
             skipDuplicates: true,
           },
         },
+        isTriggered: true,
       },
       include: {
         tags: true,

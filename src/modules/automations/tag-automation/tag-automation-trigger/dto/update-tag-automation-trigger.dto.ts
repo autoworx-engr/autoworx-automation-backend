@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, IsOptional } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { PipelineType, TagConditionType } from '@prisma/client';
 
@@ -28,7 +28,7 @@ export class UpdateTagAutomationTriggerDto {
     type: String,
     required: false,
   })
-  @IsNumber({}, { message: 'Invoice Id must be a number' })
+  @IsString()
   @IsOptional()
   invoiceId: string;
 
