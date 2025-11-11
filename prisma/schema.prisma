@@ -1,12 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-
-  directUrl = env("DIRECT_URL")
+  // directUrl   = env("DIRECT_URL")
 }
 
 // Appointment for a company.
@@ -68,6 +68,19 @@ model AppointmentTitle {
 
   @@index([companyId])
   @@map("appointment_titles")
+}
+
+model BookingForm {
+  id          Int      @id @default(autoincrement())
+  title       String?  @db.VarChar(200)
+  description String?  @db.VarChar(500)
+  companyId   Int      @map("company_id")
+  bookingUrl  String   @map("booking_url") @db.Text
+  qrCodeUrl   String   @map("qr_code_url") @db.Text
+  stack       Int      @default(1)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 }
 
 // Pipeline Automation Schema
@@ -746,7 +759,8 @@ model Lead {
   tasks               Task[]
   leadTags            LeadTags[]
   serviceId           Int?
-  Service             Service?             @relation(fields: [serviceId], references: [id])
+  Service             Service?   @relation(fields: [serviceId], references: [id])
+  multipleServices    Service[]  @relation("LeadMultipleServices")
   clientId            Int?
   isTriggered         Boolean              @default(false)
   Client              Client[]
@@ -1141,6 +1155,7 @@ model Service {
   requestEstimate         RequestEstimate?          @relation("Service")
   InvoiceRedo             InvoiceRedo[]
   Lead                    Lead[]
+  multipleLeads           Lead[]                    @relation("LeadMultipleServices")
   ServiceMaintenanceStage ServiceMaintenanceStage[]
 
   @@index([companyId], name: "fk_services_company")
@@ -1314,8 +1329,8 @@ model Invoice {
   invoiceItems            InvoiceItem[]
   vehicleParts            VehicleParts[]
   photos                  InvoicePhoto[]
-  tasks                   Task[]
   signatureImage          String?
+  tasks                   Task[]
   status                  Status?                   @relation(fields: [statusId], references: [id])
   payments                Payment[]
   user                    User?                     @relation(name: "user", fields: [userId], references: [id], onDelete: SetNull)
