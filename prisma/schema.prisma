@@ -311,7 +311,7 @@ model TagAutomationRule {
   // columns                    Column[]
   tagAutomationPipeline      TagAutomationPipeline?
   tagAutomationCommunication TagAutomationCommunication?
-  PostTagAutomationColumn    PostTagAutomationColumn[]
+  PostTagAutomationColumn    PostTagAutomationColumn?
   timeDelayExecution         TimeDelayExecution[]
   createdAt                  DateTime                    @default(now())
   updatedAt                  DateTime                    @default(now()) @updatedAt
@@ -346,7 +346,7 @@ model TagAutomationCommunication {
 
 model PostTagAutomationColumn {
   id              Int               @id @default(autoincrement())
-  tagAutomationId Int
+  tagAutomationId Int               @unique
   columnIds       Column[]
   tagAutomation   TagAutomationRule @relation(fields: [tagAutomationId], references: [id], onDelete: Cascade)
   createdAt       DateTime          @default(now())
@@ -1315,6 +1315,7 @@ model Invoice {
   vehicleParts            VehicleParts[]
   photos                  InvoicePhoto[]
   tasks                   Task[]
+  signatureImage          String?
   status                  Status?                   @relation(fields: [statusId], references: [id])
   payments                Payment[]
   user                    User?                     @relation(name: "user", fields: [userId], references: [id], onDelete: SetNull)

@@ -14,15 +14,20 @@ export class TagAutomationTriggerRepository {
   async findAllRule(
     companyId: number,
     pipelineType: PipelineType,
-    conditionType: TagConditionType,
+    conditionType?: TagConditionType,
   ) {
+    const whereClause: any = {
+      companyId,
+      isPaused: false,
+      pipelineType,
+    };
+
+    if (conditionType) {
+      whereClause.condition_type = conditionType;
+    }
+
     const result = await this.prisma.tagAutomationRule.findMany({
-      where: {
-        companyId: companyId,
-        isPaused: false,
-        pipelineType: pipelineType,
-        condition_type: conditionType,
-      },
+      where: whereClause,
       include: {
         tag: true,
         tagAutomationPipeline: true,

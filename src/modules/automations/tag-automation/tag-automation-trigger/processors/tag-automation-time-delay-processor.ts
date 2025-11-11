@@ -1,7 +1,7 @@
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Job, Queue } from 'bull';
 import { GlobalRepository } from 'src/shared/global-service/repository/global.repository';
-import { Inject, Logger, forwardRef } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import {
   Client,
   ExecutionStatus,
@@ -17,7 +17,6 @@ import {
 import { SmsService } from 'src/shared/global-service/sendSms/sms.service';
 import { InfobipSmsService } from 'src/shared/global-service/sendInfobipSms/infobip-sms.service';
 import { isValidUSMobile } from 'src/shared/global-service/utils/isValidUSMobile';
-import { TimeDelayRuleService } from 'src/modules/automations/pipeline-automation/pipeline-automation-trigger/services/time-delay-rule.service';
 import { TagAutomationTriggerRepository } from '../repository/tag-automation-trigger.repository';
 import { TagAutomationRuleWithRelations } from 'src/common/types/tagAutomationRule';
 import { TagAutomationTriggerService } from '../services/tag-automation-trigger.service';
@@ -33,8 +32,6 @@ export class TagTimeDelayProcessor {
     private readonly mailService: MailService,
     @InjectQueue('tag-time-delay')
     private readonly timeDelayQueue: Queue,
-    @Inject(forwardRef(() => TimeDelayRuleService))
-    private readonly timeDelayRuleService: TimeDelayRuleService,
     private readonly tagAutomationTriggerService: TagAutomationTriggerService,
   ) {}
   private readonly logger = new Logger(TagTimeDelayProcessor.name);
@@ -51,6 +48,10 @@ export class TagTimeDelayProcessor {
       invoiceId,
     } = job.data;
 
+    this.logger.log(
+      `🎯 Processing tag delay job: ${JSON.stringify(job.data)} `,
+    );
+
     try {
       const execution = await this.globalRepository.findTimeDelayExecution(
         executionId as number,
@@ -63,20 +64,6 @@ export class TagTimeDelayProcessor {
 
       const rule: TagAutomationRuleWithRelations =
         await this.tagAutomationRepository.findRuleById(ruleId as number);
-
-      let lead;
-      let invoice;
-
-      if (invoiceId) {
-        invoice = await this.globalRepository.findInvoiceById(
-          invoiceId,
-          companyId,
-          'Invoice',
-        );
-      } else {
-        lead = await this.globalRepository.findLeadById(leadId, companyId);
-      }
-
       if (!rule) {
         this.logger.warn(`Rule ${ruleId} not found, skipping execution`);
         await this.globalRepository.updateExecutionStatus(
@@ -95,12 +82,26 @@ export class TagTimeDelayProcessor {
         return { success: false, reason: 'Rule is paused' };
       }
 
+      let lead;
+      let invoice;
+
+      if (invoiceId) {
+        invoice = await this.globalRepository.findInvoiceById(
+          invoiceId,
+          companyId,
+          'Invoice',
+        );
+      } else {
+        lead = await this.globalRepository.findLeadById(leadId, companyId);
+      }
+
       if (
         conditionType === 'pipeline' &&
         tagId &&
         rule?.tagAutomationPipeline?.targetColumnId
       ) {
         if (invoiceId && rule?.pipelineType === 'SHOP') {
+          console.log('invoice and shop pipeline');
           const updateInvoiceColumnId =
             await this.globalRepository.updateEstimateColumn({
               companyId,
@@ -114,6 +115,7 @@ export class TagTimeDelayProcessor {
           );
         }
         if (leadId && rule?.pipelineType === 'SALES') {
+          console.log('lead and sales pipeline');
           const updateLeadColumnId =
             await this.globalRepository.updatePipelineLeadColumn({
               companyId,

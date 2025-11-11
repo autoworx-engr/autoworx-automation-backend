@@ -37,11 +37,12 @@ export class TagAutomationTriggerService {
     leadId,
     conditionType,
     invoiceId,
+    tagId,
   }: IScheduleTimeDelayTagAutomation): Promise<{ jobId: string } | undefined> {
     try {
       let lead;
       let invoice: Invoice | null = null;
-      let baseTime;
+      // let baseTime;
 
       if (invoiceId) {
         invoice = await this.globalRepository.findInvoiceById(
@@ -55,7 +56,7 @@ export class TagAutomationTriggerService {
           return;
         }
 
-        baseTime = invoice?.columnChangedAt || new Date();
+        // baseTime = invoice?.columnChangedAt || new Date();
       }
       if (leadId) {
         lead = await this.globalRepository.findLeadById(leadId, companyId);
@@ -65,14 +66,14 @@ export class TagAutomationTriggerService {
           return;
         }
 
-        baseTime = lead?.columnChangedAt || new Date();
+        // baseTime = lead?.columnChangedAt || new Date();
       }
 
-      const executeAt = new Date(baseTime.getTime() + delayInSeconds * 1000);
+      const executeAt = new Date(delayInSeconds * 1000);
 
-      const remainingDelay = executeAt.getTime() - Date.now();
+      // const remainingDelay = executeAt.getTime() - Date.now();
 
-      const actualDelayMs = Math.max(0, remainingDelay);
+      const actualDelayMs = delayInSeconds * 1000;
 
       // Create a record in the database
       const timeDelayExecution =
@@ -90,6 +91,7 @@ export class TagAutomationTriggerService {
           companyId,
           leadId,
           conditionType,
+          tagId,
         },
         {
           delay: actualDelayMs,
@@ -97,14 +99,12 @@ export class TagAutomationTriggerService {
           removeOnComplete: true,
         },
       );
-
+      this.logger.log(
+        `Scheduled time delay job ${job.id} for ${conditionType} with delay ${delayInSeconds} seconds in tag automation!`,
+      );
       await this.globalRepository.updateTimeDelayExecution(
         timeDelayExecution.id,
         job.id.toString(),
-      );
-
-      this.logger.log(
-        `Scheduled time delay job ${job.id} for in column ${columnId} with delay ${delayInSeconds} seconds`,
       );
 
       return { jobId: job.id.toString() };
@@ -126,10 +126,7 @@ export class TagAutomationTriggerService {
       companyId: rule?.companyId,
       leadId: lead?.id,
       invoiceId: invoice?.id,
-      delayInSeconds:
-        (rule.timeDelay as string | number) === 'Immediate'
-          ? 0
-          : Number(rule.timeDelay ?? 0),
+      delayInSeconds: rule?.timeDelay ?? 0,
       conditionType: rule?.condition_type,
       tagId,
     });
@@ -197,10 +194,7 @@ export class TagAutomationTriggerService {
         companyId: rule.companyId,
         leadId: lead?.id,
         invoiceId: invoice?.id,
-        delayInSeconds:
-          (rule.timeDelay as string | number) === 'Immediate'
-            ? 0
-            : Number(rule.timeDelay ?? 0),
+        delayInSeconds: rule?.timeDelay ?? 0,
         conditionType: rule?.condition_type,
         tagId,
       });
@@ -218,9 +212,7 @@ export class TagAutomationTriggerService {
         const nextValidTime = await this.getAdjustedExecutionDateForTag(
           rule.id,
           new Date(),
-          (rule.timeDelay as string | number) === 'Immediate'
-            ? 0
-            : Number(rule.timeDelay ?? 0),
+          rule?.timeDelay ?? 0,
         );
 
         const delayMs = Math.max(0, nextValidTime.getTime() - Date.now());
@@ -282,10 +274,7 @@ export class TagAutomationTriggerService {
       companyId: rule?.companyId,
       leadId: lead?.id,
       invoiceId: invoice?.id,
-      delayInSeconds:
-        (rule.timeDelay as string | number) === 'Immediate'
-          ? 0
-          : Number(rule.timeDelay ?? 0),
+      delayInSeconds: rule?.timeDelay ?? 0,
       conditionType: rule?.condition_type,
     });
     return {
@@ -305,7 +294,7 @@ export class TagAutomationTriggerService {
       conditionType,
       invoiceId,
     } = body || {};
-
+    console.log('body', body);
     if (invoiceId) {
       this.logger.log(
         `Tag automation triggered for invoice Id ${invoiceId}, pipeline type is ${pipelineType} and condition type is ${conditionType}!`,
@@ -403,8 +392,8 @@ export class TagAutomationTriggerService {
       else if (
         rule.condition_type === 'post_tag' &&
         !tagId &&
-        rule.PostTagAutomationColumn.some((postTag) =>
-          postTag?.columnIds.some((c: Column) => c?.id === columnId),
+        rule.PostTagAutomationColumn?.columnIds.some(
+          (c: Column) => c?.id === columnId,
         )
       ) {
         if (invoiceId) {

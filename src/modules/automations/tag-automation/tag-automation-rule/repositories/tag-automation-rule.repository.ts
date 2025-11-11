@@ -332,9 +332,9 @@ export class TagAutomationRuleRepository {
     if (condition_type === 'post_tag' && validColumns.length) {
       await this.prisma.postTagAutomationColumn.create({
         data: {
-          tagAutomationId: tagAutomationRuleData?.id,
+          tagAutomationId: tagAutomationRuleData.id, // must exist
           columnIds: {
-            connect: columnIds?.map((cid) => ({ id: cid })),
+            connect: columnIds?.map((cid) => ({ id: cid })), // many-to-many with Column
           },
         },
         include: {
@@ -343,6 +343,7 @@ export class TagAutomationRuleRepository {
         },
       });
     }
+
     const result = await this.prisma.tagAutomationRule.findUnique({
       where: { id: tagAutomationRuleData?.id },
       include: {
@@ -512,7 +513,7 @@ export class TagAutomationRuleRepository {
         data: updateData,
         include: {
           tag: true,
-          tagAutomationCommunication: true,
+          tagAutomationCommunication: { include: { attachments: true } },
           tagAutomationPipeline: true,
           PostTagAutomationColumn: {
             include: {

@@ -16,7 +16,7 @@ export class UpdateTagAutomationTriggerDto {
     description: 'This is lead ID',
     example: '13489758',
     type: Number,
-    required: true,
+    required: false,
   })
   @IsNumber({}, { message: 'Lead Id must be a number' })
   @IsOptional()
@@ -26,7 +26,7 @@ export class UpdateTagAutomationTriggerDto {
     description: 'This is invoice ID',
     example: '13489758',
     type: String,
-    required: true,
+    required: false,
   })
   @IsNumber({}, { message: 'Invoice Id must be a number' })
   @IsOptional()
@@ -36,7 +36,7 @@ export class UpdateTagAutomationTriggerDto {
     description: 'This is column ID',
     example: 1,
     type: Number,
-    required: true,
+    required: false,
   })
   @IsNumber({}, { message: 'Column Id must be a number' })
   @IsOptional()
@@ -46,7 +46,7 @@ export class UpdateTagAutomationTriggerDto {
     description: 'This is tag ID',
     example: 1,
     type: Number,
-    required: true,
+    required: false,
   })
   @IsNumber({}, { message: 'Tag Id must be a number' })
   @IsOptional()
@@ -58,5 +58,6 @@ export class UpdateTagAutomationTriggerDto {
 
   @ApiProperty({ enum: TagConditionType, example: 'pipeline' })
   @IsEnum(TagConditionType)
+  @IsOptional()
   conditionType: TagConditionType;
 }

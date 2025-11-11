@@ -1,6 +1,5 @@
 import { BullModule } from '@nestjs/bull';
-import { forwardRef, Module } from '@nestjs/common';
-import { PipelineAutomationTriggerModule } from 'src/modules/automations/pipeline-automation/pipeline-automation-trigger/pipeline-automation-trigger.module';
+import { Module } from '@nestjs/common';
 import { TagAutomationTriggerRepository } from './repository/tag-automation-trigger.repository';
 import { TagAutomationTriggerService } from './services/tag-automation-trigger.service';
 import { TagTimeDelayProcessor } from './processors/tag-automation-time-delay-processor';
@@ -18,7 +17,6 @@ import { GlobalRepository } from 'src/shared/global-service/repository/global.re
         removeOnFail: false,
       },
     }),
-    forwardRef(() => PipelineAutomationTriggerModule),
   ],
   controllers: [TagAutomationTriggerController],
   providers: [
