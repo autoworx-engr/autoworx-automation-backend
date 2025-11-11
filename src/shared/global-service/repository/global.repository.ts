@@ -21,6 +21,10 @@ export class GlobalRepository {
         companyId,
       },
       ...params,
+      include: {
+        leadTags: true,
+        Client: true,
+      },
     });
     if (!lead) {
       throw new Error('Lead not found');
@@ -94,6 +98,7 @@ export class GlobalRepository {
     communicationRuleId = null,
     serviceMaintenanceRuleId = null,
     invoiceAutomationRuleId = null,
+    tagAutomationRuleId = null,
     leadId = null,
     estimateId = null,
     columnId,
@@ -105,6 +110,7 @@ export class GlobalRepository {
         communicationRuleId,
         serviceMaintenanceRuleId,
         invoiceAutomationRuleId,
+        tagAutomationRuleId,
         leadId,
         estimateId,
         columnId,
@@ -183,6 +189,96 @@ export class GlobalRepository {
     });
     return updatedLead;
   }
+  async updatePipelineLeadTags({
+    companyId,
+    leadId,
+    tags,
+  }: {
+    companyId: number;
+    leadId: number;
+    tags: number[];
+  }): Promise<Lead> {
+    const findLead = await this.prisma.lead.findUnique({
+      where: {
+        id: leadId,
+        companyId,
+      },
+    });
+
+    if (!findLead) {
+      throw new NotFoundException('Lead not found');
+    }
+
+    // Update the lead with new column and track the column change time
+    const updatedLead = await this.prisma.lead.update({
+      where: {
+        id: leadId,
+        companyId,
+      },
+      data: {
+        leadTags: {
+          createMany: {
+            data: tags.map((tagId) => ({
+              tagId,
+            })),
+            skipDuplicates: true,
+          },
+        },
+        isTriggered: true,
+      },
+      include: {
+        leadTags: true,
+        Client: true,
+      },
+    });
+    console.log('updatedLead', updatedLead);
+    return updatedLead;
+  }
+  async updatePipelineInvoiceTags({
+    companyId,
+    invoiceId,
+    tags,
+  }: {
+    companyId: number;
+    invoiceId: string;
+    tags: number[];
+  }): Promise<Invoice> {
+    const findLead = await this.prisma.invoice.findUnique({
+      where: {
+        id: invoiceId,
+        companyId,
+      },
+    });
+
+    if (!findLead) {
+      throw new NotFoundException('Lead not found');
+    }
+
+    // Update the lead with new column and track the column change time
+    const updatedLead = await this.prisma.invoice.update({
+      where: {
+        id: invoiceId,
+        companyId,
+      },
+      data: {
+        tags: {
+          createMany: {
+            data: tags.map((tagId) => ({
+              tagId,
+            })),
+            skipDuplicates: true,
+          },
+        },
+        isTriggered: true,
+      },
+      include: {
+        tags: true,
+        client: true,
+      },
+    });
+    return updatedLead;
+  }
+
   async updateEstimateColumn({
     companyId,
     estimateId,

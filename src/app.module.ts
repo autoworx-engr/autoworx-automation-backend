@@ -21,6 +21,7 @@ import { InvoiceAutomationTriggerModule } from './modules/automations/invoice-au
 import { MarketingAutomationModule } from './modules/automations/marketing-automation/marketing-automation.module';
 import { PipelineAutomationModule } from './modules/automations/pipeline-automation/pipeline-automation.module';
 import { ServiceAutomationModule } from './modules/automations/service-automation/service-automation.module';
+import { TagAutomationModule } from './modules/automations/tag-automation/tag-automation.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { GlobalModule } from './shared/global-service/global.module';
@@ -139,6 +140,7 @@ import { GlobalModule } from './shared/global-service/global.module';
     ReminderModule,
     NotificationModule,
     AutoClockOutModule,
+    TagAutomationModule,
   ],
   controllers: [],
   providers: [],

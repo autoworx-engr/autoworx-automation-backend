@@ -26,6 +26,7 @@ async function bootstrap() {
       'marketing-campaign-trigger',
       'pipeline-time-delay',
       'service-time-delay',
+      'tag-time-delay',
       'auto-clockout-queue',
     ];
 
@@ -72,6 +73,7 @@ async function bootstrap() {
         const allowedOrigins = (process.env.ACCESS_CORS_ORIGINS || '').split(
           ',',
         );
+
         if (!origin || allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {

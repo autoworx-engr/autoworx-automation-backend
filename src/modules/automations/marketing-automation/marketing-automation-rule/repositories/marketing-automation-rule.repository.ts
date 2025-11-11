@@ -1,5 +1,5 @@
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
-  BadRequestException,
   HttpException,
   HttpStatus,
   Inject,
@@ -7,11 +7,10 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import * as moment from 'moment';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateMarketingRuleDto } from '../dto/create-marketing-rule.dto';
 import { UpdateMarketingRuleDto } from '../dto/update-marketing-rule.dto';
-import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import * as moment from 'moment';
 
 @Injectable()
 export class MarketingAutomationRuleRepository {
