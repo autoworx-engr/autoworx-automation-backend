@@ -315,7 +315,8 @@ export class TagAutomationTriggerService {
         companyId,
         'Invoice',
       );
-    } else {
+    }
+    if (leadId) {
       lead = await this.globalRepository.findLeadById(leadId, companyId);
     }
 

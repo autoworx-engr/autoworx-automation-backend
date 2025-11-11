@@ -1,63 +1,73 @@
-import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum, IsNumber, IsOptional } from 'class-validator';
 import { PipelineType, TagConditionType } from '@prisma/client';
 
 export class UpdateTagAutomationTriggerDto {
   @ApiProperty({
-    description: 'This is company ID',
+    description: 'Company ID',
     example: 1,
     type: Number,
-    required: true,
   })
-  @IsNumber({}, { message: 'Company ID must be a number' })
+  @IsNumber({}, { message: 'companyId must be a number' })
   companyId: number;
 
   @ApiProperty({
-    description: 'This is lead ID',
-    example: '13489758',
+    description: 'Lead ID (optional)',
+    example: 13489758,
     type: Number,
     required: false,
   })
-  @IsNumber({}, { message: 'Lead Id must be a number' })
   @IsOptional()
-  leadId: number;
+  @IsNumber({}, { message: 'leadId must be a number' })
+  leadId?: number;
 
   @ApiProperty({
-    description: 'This is invoice ID',
-    example: '13489758',
+    description: 'Invoice ID (optional)',
+    example: 987654,
     type: String,
     required: false,
   })
-  @IsString()
   @IsOptional()
-  invoiceId: string;
+  @IsNumber({}, { message: 'invoiceId must be a number' })
+  invoiceId?: string;
 
   @ApiProperty({
-    description: 'This is column ID',
-    example: 1,
+    description: 'Column ID (optional)',
+    example: 2,
     type: Number,
     required: false,
   })
-  @IsNumber({}, { message: 'Column Id must be a number' })
   @IsOptional()
-  columnId: number;
+  @IsNumber({}, { message: 'columnId must be a number' })
+  columnId?: number;
 
   @ApiProperty({
-    description: 'This is tag ID',
-    example: 1,
+    description: 'Tag ID (optional)',
+    example: 4,
     type: Number,
     required: false,
   })
-  @IsNumber({}, { message: 'Tag Id must be a number' })
   @IsOptional()
-  tagId: number;
+  @IsNumber({}, { message: 'tagId must be a number' })
+  tagId?: number;
 
-  @ApiProperty({ enum: PipelineType, example: 'SALES' })
-  @IsEnum(PipelineType)
+  @ApiProperty({
+    description: 'Pipeline Type',
+    enum: PipelineType,
+    example: PipelineType.SALES,
+  })
+  @IsEnum(PipelineType, { message: 'pipelineType must be a valid enum value' })
   pipelineType: PipelineType;
 
-  @ApiProperty({ enum: TagConditionType, example: 'pipeline' })
-  @IsEnum(TagConditionType)
+  @ApiProperty({
+    description: 'Condition Type (optional)',
+    enum: TagConditionType,
+    example: TagConditionType.post_tag,
+    required: false,
+  })
   @IsOptional()
-  conditionType: TagConditionType;
+  @IsEnum(TagConditionType, {
+    message: 'conditionType must be a valid enum value',
+  })
+  conditionType?: TagConditionType;
 }
