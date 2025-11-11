@@ -295,7 +295,7 @@ export class TagAutomationTriggerService {
       conditionType,
       invoiceId,
     } = body || {};
-    console.log('body', body);
+
     if (invoiceId) {
       this.logger.log(
         `Tag automation triggered for invoice Id ${invoiceId}, pipeline type is ${pipelineType} and condition type is ${conditionType}!`,
@@ -362,8 +362,6 @@ export class TagAutomationTriggerService {
     }
 
     for (const rule of tagAutomationRules) {
-      // PIPELINE CONDITION
-
       if (tagId) {
         if (
           rule.condition_type === 'pipeline' &&
@@ -399,12 +397,22 @@ export class TagAutomationTriggerService {
             this.logger.log(
               `The tag automation trigger with communication condition in shop pipeline in invoice ${invoiceId}`,
             );
-            await this.sendAutomationCommunication(rule as any, tagId, invoice);
+            await this.sendAutomationCommunication(
+              rule as any,
+              tagId,
+              lead,
+              invoice,
+            );
           } else {
             this.logger.log(
               `The tag automation trigger with communication condition in shop pipeline in invoice ${invoiceId}`,
             );
-            await this.sendAutomationCommunication(rule as any, tagId, lead);
+            await this.sendAutomationCommunication(
+              rule as any,
+              tagId,
+              lead,
+              invoice,
+            );
           }
         }
       }
