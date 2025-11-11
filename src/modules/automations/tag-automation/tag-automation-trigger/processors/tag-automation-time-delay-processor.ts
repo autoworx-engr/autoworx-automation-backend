@@ -112,6 +112,13 @@ export class TagTimeDelayProcessor {
             this.logger.log(
               `The tag automation condition pipeline with shop successfully, invoice id ${invoiceId}`,
             );
+            await this.tagAutomationTriggerService.update({
+              columnId: updateInvoiceColumnId.columnId!,
+              companyId: companyId,
+              pipelineType: 'SHOP',
+              invoiceId: invoiceId,
+              conditionType: 'post_tag',
+            });
           }
         }
         if (leadId && rule?.pipelineType === 'SALES') {
@@ -125,6 +132,13 @@ export class TagTimeDelayProcessor {
             this.logger.log(
               `The tag automation condition pipeline with sales successfully, lead id ${leadId}`,
             );
+            await this.tagAutomationTriggerService.update({
+              columnId: updateLeadColumnId.columnId!,
+              companyId: companyId,
+              pipelineType: 'SALES',
+              leadId: leadId,
+              conditionType: 'post_tag',
+            });
           }
         }
 
