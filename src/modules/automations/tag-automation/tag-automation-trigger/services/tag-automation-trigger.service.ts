@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
@@ -7,7 +6,7 @@ import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { TagAutomationTriggerRepository } from '../repository/tag-automation-trigger.repository';
 import { IScheduleTimeDelayTagAutomation } from 'src/modules/automations/communication-automation/communication-automation-trigger/interfaces/communication-automation-trigger.interface';
 import { UpdateTagAutomationTriggerDto } from '../dto/update-tag-automation-trigger.dto';
-import { Column, Invoice, Lead, TagAutomationRule } from '@prisma/client';
+import { Column, Invoice, Lead, Tag, TagAutomationRule } from '@prisma/client';
 import moment from 'moment';
 import { CommunicationAutomationTriggerRepository } from 'src/modules/automations/communication-automation/communication-automation-trigger/repository/communication-automation-trigger.repository';
 import { TagAutomationRuleWithRelations } from 'src/common/types/tagAutomationRule';
@@ -115,12 +114,17 @@ export class TagAutomationTriggerService {
     }
   }
 
-  async triggerPipelineAutomation(
-    rule: TagAutomationRule,
-    tagId: number,
-    lead?: Lead,
-    invoice?: Invoice,
-  ) {
+  async triggerPipelineAutomation({
+    rule,
+    tagId,
+    lead,
+    invoice,
+  }: {
+    rule: TagAutomationRule;
+    tagId: number;
+    lead?: Lead;
+    invoice?: Invoice;
+  }) {
     await this.scheduleTimeDelay({
       ruleId: rule.id,
       columnId: invoice ? invoice.columnId! : (lead?.columnId as number),
@@ -137,12 +141,17 @@ export class TagAutomationTriggerService {
     };
   }
 
-  async sendAutomationCommunication(
-    rule: TagAutomationRuleWithRelations,
-    tagId: number,
-    lead?: Lead,
-    invoice?: Invoice,
-  ) {
+  async sendAutomationCommunication({
+    rule,
+    tagId,
+    lead,
+    invoice,
+  }: {
+    rule: TagAutomationRuleWithRelations;
+    tagId: number;
+    lead?: Lead;
+    invoice?: Invoice;
+  }) {
     const eligibleRules: TagAutomationRuleWithRelations[] = [];
     const rulesToReschedule: TagAutomationRuleWithRelations[] = [];
 
@@ -268,7 +277,15 @@ export class TagAutomationTriggerService {
     };
   }
 
-  async addTagsToLead(rule: TagAutomationRule, lead?: Lead, invoice?: Invoice) {
+  async addTagsToLead({
+    rule,
+    lead,
+    invoice,
+  }: {
+    rule: TagAutomationRule;
+    lead?: Lead;
+    invoice?: Invoice;
+  }) {
     await this.scheduleTimeDelay({
       ruleId: rule.id,
       columnId: invoice ? invoice.columnId! : (lead?.columnId as number),
@@ -306,8 +323,8 @@ export class TagAutomationTriggerService {
       );
     }
 
-    let lead;
-    let invoice;
+    let lead: Lead | null = null;
+    let invoice: Invoice | null = null;
 
     if (invoiceId) {
       invoice = await this.globalRepository.findInvoiceById(
@@ -321,38 +338,34 @@ export class TagAutomationTriggerService {
     }
 
     //Use cache for rules list
-    // const rulesCacheKey = `${this.RULES_LIST_KEY}${companyId}`;
-    // const cachedRules = await this.cacheManager.get<string>(rulesCacheKey);
+    const rulesCacheKey = `${this.RULES_LIST_KEY}${companyId}`;
+    const cachedRules = await this.cacheManager.get<string>(rulesCacheKey);
 
-    const tagAutomationRules =
-      await this.tagAutomationTriggerRepository.findAllRule(
-        companyId,
-        pipelineType,
-        conditionType,
+    let tagAutomationRules: any[] | null = null;
+
+    if (cachedRules) {
+      tagAutomationRules = JSON.parse(cachedRules);
+      this.logger.log(
+        `Loaded tag automation rules from cache: ${rulesCacheKey}`,
       );
-    // if (cachedRules) {
-    //   tagAutomationRules = JSON.parse(cachedRules);
-    //   this.logger.log(
-    //     `Loaded tag automation rules from cache: ${rulesCacheKey}`,
-    //   );
-    // } else {
-    //   tagAutomationRules =
-    //     await this.tagAutomationTriggerRepository.findAllRule(
-    //       companyId,
-    //       pipelineType,
-    //       conditionType,
-    //     );
+    } else {
+      tagAutomationRules =
+        await this.tagAutomationTriggerRepository.findAllRule(
+          companyId,
+          pipelineType,
+          conditionType,
+        );
 
-    //   await this.cacheManager.set(
-    //     rulesCacheKey,
-    //     JSON.stringify(tagAutomationRules),
-    //     this.CACHE_TTL * 1000,
-    //   );
+      await this.cacheManager.set(
+        rulesCacheKey,
+        JSON.stringify(tagAutomationRules),
+        this.CACHE_TTL * 1000,
+      );
 
-    //   this.logger.log(
-    //     `Cache set for tag automation rules trigger: ${rulesCacheKey}`,
-    //   );
-    // }
+      this.logger.log(
+        `Cache set for tag automation rules trigger: ${rulesCacheKey}`,
+      );
+    }
 
     if (!tagAutomationRules || tagAutomationRules.length === 0) {
       this.logger.warn(
@@ -369,21 +382,18 @@ export class TagAutomationTriggerService {
           rule.tagAutomationPipeline?.targetColumnId &&
           rule.tag.some((t) => t.id === tagId)
         ) {
-          if (invoiceId) {
+          if (invoiceId && invoice) {
             this.logger.log(
               `The tag automation trigger with pipeline condition in shop pipeline in invoice ${invoiceId}`,
             );
-            await this.triggerPipelineAutomation(
-              rule,
-              tagId,
-              undefined,
-              invoice,
-            );
-          } else {
+            await this.triggerPipelineAutomation({ rule, tagId, invoice });
+          }
+
+          if (leadId && lead) {
             this.logger.log(
               `The tag automation trigger with pipeline condition in shop pipeline in invoice ${invoiceId}`,
             );
-            await this.triggerPipelineAutomation(rule, tagId, lead, undefined);
+            await this.triggerPipelineAutomation({ rule, tagId, lead });
           }
         }
 
@@ -391,33 +401,33 @@ export class TagAutomationTriggerService {
         if (
           tagId &&
           rule.condition_type === 'communication' &&
-          rule.tag.some((t) => t.id === tagId)
+          rule.tag.some((t: Tag) => t.id === tagId)
         ) {
-          if (invoiceId) {
+          if (invoiceId && invoice) {
             this.logger.log(
               `The tag automation trigger with communication condition in shop pipeline in invoice ${invoiceId}`,
             );
-            await this.sendAutomationCommunication(
-              rule as any,
+            await this.sendAutomationCommunication({
+              rule,
               tagId,
-              lead,
               invoice,
-            );
-          } else {
+            });
+          }
+
+          if (leadId && lead) {
             this.logger.log(
               `The tag automation trigger with communication condition in shop pipeline in invoice ${invoiceId}`,
             );
-            await this.sendAutomationCommunication(
-              rule as any,
+            await this.sendAutomationCommunication({
+              rule,
               tagId,
               lead,
-              invoice,
-            );
+            });
           }
         }
       }
 
-      // POSTTAG CONDITION
+      // POST TAG CONDITION
       if (
         rule.condition_type === 'post_tag' &&
         !tagId &&
@@ -425,17 +435,17 @@ export class TagAutomationTriggerService {
           (c: Column) => c?.id === columnId,
         )
       ) {
-        if (invoiceId) {
-          await this.addTagsToLead(rule, invoice);
+        if (invoiceId && invoice) {
+          await this.addTagsToLead({ rule, invoice });
+        } else if (leadId && lead) {
+          await this.addTagsToLead({ rule, lead });
         } else {
-          await this.addTagsToLead(rule, lead);
+          this.logger.warn(
+            'The Lead/Invoice does not match any tag automation rule for post tag condition!',
+          );
         }
         return;
       }
-
-      this.logger.warn(
-        'The Lead/Invoice does not match any tag automation rule for post tag condition!',
-      );
     }
   }
 
