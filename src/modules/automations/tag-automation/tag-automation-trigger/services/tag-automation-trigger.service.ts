@@ -14,9 +14,9 @@ import { TagAutomationRuleWithRelations } from 'src/common/types/tagAutomationRu
 @Injectable()
 export class TagAutomationTriggerService {
   private readonly logger = new Logger(TagAutomationTriggerService.name);
-  private readonly RULE_CACHE_KEY = 'tag_automation_rule:';
-  private readonly RULES_LIST_KEY = 'tag_automation_rules:list:';
-  private readonly CACHE_TTL = 3600;
+  // private readonly RULE_CACHE_KEY = 'tag_automation_rule:';
+  // private readonly RULES_LIST_KEY = 'tag_automation_rules:list:trigger';
+  // private readonly CACHE_TTL = 3600;
 
   constructor(
     @InjectQueue('tag-time-delay')
@@ -337,35 +337,12 @@ export class TagAutomationTriggerService {
       lead = await this.globalRepository.findLeadById(leadId, companyId);
     }
 
-    //Use cache for rules list
-    const rulesCacheKey = `${this.RULES_LIST_KEY}${companyId}`;
-    const cachedRules = await this.cacheManager.get<string>(rulesCacheKey);
-
-    let tagAutomationRules: any[] | null = null;
-
-    if (cachedRules) {
-      tagAutomationRules = JSON.parse(cachedRules);
-      this.logger.log(
-        `Loaded tag automation rules from cache: ${rulesCacheKey}`,
+    const tagAutomationRules: any[] =
+      await this.tagAutomationTriggerRepository.findAllRule(
+        companyId,
+        pipelineType,
+        conditionType,
       );
-    } else {
-      tagAutomationRules =
-        await this.tagAutomationTriggerRepository.findAllRule(
-          companyId,
-          pipelineType,
-          conditionType,
-        );
-
-      await this.cacheManager.set(
-        rulesCacheKey,
-        JSON.stringify(tagAutomationRules),
-        this.CACHE_TTL * 1000,
-      );
-
-      this.logger.log(
-        `Cache set for tag automation rules trigger: ${rulesCacheKey}`,
-      );
-    }
 
     if (!tagAutomationRules || tagAutomationRules.length === 0) {
       this.logger.warn(
@@ -375,6 +352,13 @@ export class TagAutomationTriggerService {
     }
 
     for (const rule of tagAutomationRules) {
+      if (rule.isPaused) {
+        this.logger.warn(
+          `The tag automation Rule ${rule?.id} is paused, skipping execution`,
+        );
+
+        continue;
+      }
       if (tagId) {
         if (
           rule.condition_type === 'pipeline' &&
