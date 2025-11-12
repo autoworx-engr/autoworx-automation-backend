@@ -2,13 +2,7 @@ import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Job, Queue } from 'bull';
 import { GlobalRepository } from 'src/shared/global-service/repository/global.repository';
 import { Logger } from '@nestjs/common';
-import {
-  Client,
-  ExecutionStatus,
-  InvoiceTags,
-  Lead,
-  LeadTags,
-} from '@prisma/client';
+import { Attachment, Client, ExecutionStatus, Lead } from '@prisma/client';
 import { MailService } from 'src/shared/global-service/sendEmail/mail.service';
 import {
   MailUtils,
@@ -35,6 +29,468 @@ export class TagTimeDelayProcessor {
     private readonly tagAutomationTriggerService: TagAutomationTriggerService,
   ) {}
   private readonly logger = new Logger(TagTimeDelayProcessor.name);
+
+  private async handlePipelineAutomation({
+    companyId,
+    tagId,
+    rule,
+    leadId,
+    invoiceId,
+  }) {
+    if (!tagId || !rule?.tagAutomationPipeline?.targetColumnId) {
+      return { success: false, message: 'Invalid pipeline configuration' };
+    }
+    //* INVOICE-BASED pipeline TAG AUTOMATION ---
+    if (invoiceId && rule?.pipelineType === 'SHOP') {
+      const updatedInvoice = await this.globalRepository.updateEstimateColumn({
+        companyId,
+        estimateId: invoiceId,
+        targetedColumnId: rule?.tagAutomationPipeline?.targetColumnId,
+      });
+
+      if (updatedInvoice) {
+        await this.tagAutomationTriggerService.update({
+          columnId: updatedInvoice.columnId!,
+          companyId,
+          pipelineType: 'SHOP',
+          invoiceId,
+          conditionType: 'post_tag',
+        });
+
+        this.logger.log(
+          `Pipeline automation (SHOP) executed for invoice ${invoiceId}`,
+        );
+
+        return {
+          success: true,
+          message: 'Pipeline automation triggered successfully for invoice',
+          updatedData: updatedInvoice,
+        };
+      }
+    }
+    //* LEAD-BASED POST TAG AUTOMATION ---
+    if (leadId && rule?.pipelineType === 'SALES') {
+      const updatedLead = await this.globalRepository.updatePipelineLeadColumn({
+        companyId,
+        leadId,
+        targetedColumnId: rule?.tagAutomationPipeline?.targetColumnId,
+      });
+
+      if (updatedLead) {
+        await this.tagAutomationTriggerService.update({
+          columnId: updatedLead.columnId!,
+          companyId,
+          pipelineType: 'SALES',
+          leadId,
+          conditionType: 'post_tag',
+        });
+
+        this.logger.log(
+          `Pipeline automation (SALES) executed for lead ${leadId}`,
+        );
+
+        return {
+          success: true,
+          message: 'Pipeline automation triggered successfully for lead',
+          updatedData: updatedLead,
+        };
+      }
+    }
+
+    return { success: false, message: 'Pipeline automation skipped' };
+  }
+
+  private async handleCommunicationAutomation({
+    companyId,
+    rule,
+    ruleId,
+    executionId,
+    leadId,
+    invoice,
+    invoiceId,
+    tagId,
+    conditionType,
+  }) {
+    if (
+      rule?.tagAutomationCommunication?.isSendWeekDays ||
+      rule?.tagAutomationCommunication?.isSendOfficeHours
+    ) {
+      const shouldExecute =
+        await this.tagAutomationTriggerService.shouldExecuteTagAutomation(
+          ruleId as number,
+          new Date(),
+        );
+
+      if (!shouldExecute) {
+        this.logger.log(
+          `Rule ${ruleId} is restricted by time settings (weekdays: ${rule?.tagAutomationCommunication?.isSendWeekDays}, office hours: ${rule?.tagAutomationCommunication?.isSendOfficeHours}). Current time is outside execution window. Rescheduling for next valid time.`,
+        );
+
+        try {
+          // Get the next valid business day and time
+          const nextValidTime =
+            await this.tagAutomationTriggerService.getAdjustedExecutionDateForTag(
+              ruleId as number,
+              new Date(),
+              0, // No additional delay
+            );
+
+          // Update the execution time
+          await this.globalRepository.updateExecutionTime(
+            executionId as number,
+            nextValidTime,
+          );
+
+          // Calculate new delay in milliseconds
+          const delayMs = nextValidTime.getTime() - Date.now();
+
+          // Re-queue the job with the new delay
+          if (delayMs > 0) {
+            const execution =
+              await this.globalRepository.findTimeDelayExecution(
+                executionId as number,
+              );
+
+            if (!execution) {
+              throw new Error(`Execution record ${executionId} not found`);
+            }
+
+            if (!invoice?.id) {
+              await this.timeDelayQueue.add(
+                'process-tag-time-delay',
+                {
+                  executionId,
+                  ruleId,
+                  columnId: execution.columnId,
+                  companyId,
+                  leadId,
+                  conditionType,
+                  tagId,
+                  invoiceId,
+                },
+                {
+                  delay: delayMs,
+                  jobId: `${executionId}_rescheduled`,
+                  removeOnComplete: true,
+                },
+              );
+            } else {
+              await this.timeDelayQueue.add(
+                'process-tag-time-delay',
+                {
+                  executionId,
+                  ruleId,
+                  columnId: execution.columnId,
+                  companyId,
+                  leadId,
+                  conditionType,
+                  tagId,
+                  invoiceId,
+                },
+                {
+                  delay: delayMs,
+                  jobId: `${executionId}_rescheduled`,
+                  removeOnComplete: true,
+                },
+              );
+            }
+
+            this.logger.log(
+              // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+              `Rescheduled job for execution at ${nextValidTime}`,
+            );
+          }
+
+          return {
+            success: false,
+            reason:
+              'Rule set to execute only on weekdays during active hours. Rescheduled for next valid time.',
+          };
+        } catch (error) {
+          this.logger.error(`Failed to reschedule job: ${error.message}`);
+          await this.globalRepository.updateExecutionStatus(
+            executionId as number,
+            ExecutionStatus.CANCELLED,
+          );
+          return {
+            success: false,
+            reason: 'Failed to reschedule for next valid time',
+          };
+        }
+      }
+    }
+
+    // Check if lead still exists and is in the right column
+    const lead = (await this.globalRepository.findLeadById(
+      leadId as number,
+      companyId as number,
+      {
+        include: {
+          Client: true,
+        },
+      },
+    )) as Lead & { Client: Client[] };
+
+    const vehicleInfo = lead.vehicleId
+      ? await this.globalRepository.findVehicleById(lead.vehicleId, {
+          select: { id: true, make: true, model: true, year: true },
+        })
+      : invoice?.vehicleId
+        ? await this.globalRepository.findVehicleById(
+            invoice.vehicleId as number,
+            {
+              select: { id: true, make: true, model: true, year: true },
+            },
+          )
+        : null;
+
+    const companyInfo = await this.globalRepository.findCompanyById(
+      companyId as number,
+      {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          address: true,
+          email: true,
+          smsGateway: true,
+        },
+      },
+    );
+
+    const placeholdersValue: TPlaceholder = {
+      contactName: `${lead ? lead?.clientName : invoice?.client?.firstName}`,
+      vehicle: vehicleInfo
+        ? `${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}`
+        : '',
+      businessName: companyInfo?.name || '',
+      businessPhone: companyInfo?.phone || '',
+      businessAddress: companyInfo?.address || '',
+      videoDirection: 'N/A',
+      googleMapLink: 'N/A',
+    };
+    // send email for column change
+    const formattedEmailBody = this.mailUtils.formatBody(
+      (rule?.tagAutomationCommunication?.emailBody as string) || '',
+      placeholdersValue,
+    );
+
+    const formattedSmsBody = this.mailUtils.formatBody(
+      (rule?.tagAutomationCommunication?.smsBody as string) || '',
+      placeholdersValue,
+    );
+
+    const attachmentUrls = rule?.tagAutomationCommunication?.attachments.map(
+      (attachment: Attachment) => attachment.fileUrl,
+    );
+
+    if (
+      rule?.tagAutomationCommunication?.communicationType === 'EMAIL' ||
+      rule?.tagAutomationCommunication?.communicationType === 'BOTH'
+    ) {
+      await this.mailService.sendEmail({
+        subject: rule?.tagAutomationCommunication?.subject || '',
+        clientEmail: lead
+          ? lead.clientEmail!
+          : invoice
+            ? invoice.client.email!
+            : ' ',
+        emailBody: formattedEmailBody,
+        companyEmail: companyInfo?.email || '',
+        companyId: companyId,
+        attachments: attachmentUrls,
+        clientId: vehicleInfo?.clientId ?? lead.clientId!,
+      });
+    }
+
+    if (
+      rule?.tagAutomationCommunication?.communicationType === 'SMS' ||
+      rule?.tagAutomationCommunication?.communicationType === 'BOTH'
+    ) {
+      if (
+        companyInfo &&
+        lead.Client.length > 0 &&
+        lead.Client?.[0]?.mobile &&
+        isValidUSMobile(lead.Client?.[0]?.mobile)
+      ) {
+        try {
+          if (companyInfo.smsGateway === 'TWILIO') {
+            await this.smsService.sendSms({
+              companyId: companyId,
+              clientId: lead.Client?.[0]?.id ?? lead.clientId,
+              message: formattedSmsBody,
+              attachments: attachmentUrls,
+            });
+          } else if (companyInfo.smsGateway === 'INFOBIP') {
+            await this.infobipSms.sendInfobipSms({
+              companyId: companyId,
+              clientId: lead.Client?.[0]?.id ?? lead.clientId,
+              message: formattedSmsBody,
+              attachments: attachmentUrls,
+            });
+          }
+        } catch (error) {
+          this.logger.error(`Failed to send SMS: ${error.message}`);
+        }
+      }
+    }
+
+    if (
+      rule?.tagAutomationCommunication?.communicationType === 'SMS' ||
+      rule?.tagAutomationCommunication?.communicationType === 'BOTH'
+    ) {
+      if (
+        companyInfo &&
+        invoice?.client &&
+        invoice?.client.mobile &&
+        isValidUSMobile(invoice?.client.mobile as string)
+      ) {
+        try {
+          if (companyInfo.smsGateway === 'TWILIO') {
+            await this.smsService.sendSms({
+              companyId: companyId,
+              clientId: invoice.clientId! ?? invoice.clientId,
+              message: formattedSmsBody,
+              attachments: attachmentUrls,
+            });
+          } else if (companyInfo.smsGateway === 'INFOBIP') {
+            await this.infobipSms.sendInfobipSms({
+              companyId: companyId,
+              clientId: invoice.clientId! ?? invoice.clientId,
+              message: formattedSmsBody,
+              attachments: attachmentUrls,
+            });
+          }
+        } catch (error) {
+          this.logger.error(`Failed to send SMS: ${error.message}`);
+        }
+      }
+    }
+
+    // Update execution status to COMPLETED
+    await this.globalRepository.updateExecutionStatus(
+      executionId as number,
+      ExecutionStatus.COMPLETED,
+    );
+  }
+
+  async handlePostTagAutomation({
+    companyId,
+    rule,
+    leadId,
+    invoiceId,
+    invoice,
+    lead,
+  }: {
+    companyId: number;
+    rule: any;
+    leadId?: number;
+    invoiceId?: string;
+    invoice?: any;
+    lead?: any;
+  }) {
+    try {
+      //* INVOICE-BASED POST TAG AUTOMATION ---
+      if (invoiceId) {
+        // Prevent duplicate one-time trigger
+        if (rule?.ruleType === 'one_time' && invoice?.isTriggered) {
+          this.logger.log(
+            `The post-tag automation already triggered for invoice ID: ${invoice?.id}`,
+          );
+          return {
+            success: false,
+            reason: 'Already triggered on this invoice',
+          };
+        }
+
+        // Collect existing and rule tags
+        const invoiceTags = invoice?.tags || [];
+        const ruleTags = rule?.tag || [];
+
+        const existingTagIds = invoiceTags.map(
+          (t: { tagId: number }) => t.tagId,
+        );
+        const ruleTagIds = ruleTags.map((t: { id: number }) => t.id);
+
+        // Find missing tags
+        const missingTagIds = ruleTagIds.filter(
+          (id: number) => !existingTagIds.includes(id),
+        );
+
+        if (missingTagIds.length > 0 && invoiceId) {
+          const updatedLead =
+            await this.globalRepository.updatePipelineInvoiceTags({
+              invoiceId,
+              companyId,
+              tags: missingTagIds,
+            });
+
+          if (updatedLead) {
+            this.logger.log(
+              `Post-tag automation created new tags on invoice ID: ${invoice?.id}`,
+            );
+            return {
+              success: true,
+              message: 'Tags added successfully to invoice',
+              addedTagIds: missingTagIds,
+            };
+          }
+        }
+
+        return { success: false, message: 'No new tags to add for invoice' };
+      }
+
+      //* LEAD-BASED POST TAG AUTOMATION ---
+      if (leadId) {
+        // Prevent duplicate one-time trigger
+        if (rule?.ruleType === 'one_time' && lead?.isTriggered) {
+          this.logger.log(
+            `The post-tag automation already triggered for lead ID: ${lead?.id}`,
+          );
+          return { success: false, reason: 'Already triggered on this lead' };
+        }
+
+        // Collect existing lead tags and rule tags
+        const leadTags = lead?.leadTags || [];
+        const ruleTags = rule?.tag || [];
+
+        const existingTagIds = leadTags.map((t: { tagId: number }) => t.tagId);
+        const ruleTagIds = ruleTags.map((t: { id: number }) => t.id);
+
+        // Find missing lead tags
+        const missingTagIds = ruleTagIds.filter(
+          (id: number) => !existingTagIds.includes(id),
+        );
+
+        if (missingTagIds.length > 0 && leadId) {
+          const updatedLead =
+            await this.globalRepository.updatePipelineLeadTags({
+              leadId,
+              companyId,
+              tags: missingTagIds,
+            });
+
+          if (updatedLead) {
+            this.logger.log(
+              `Post-tag automation created new tags on lead ID: ${lead?.id}`,
+            );
+            return {
+              success: true,
+              message: 'Tags added successfully to lead',
+              addedTagIds: missingTagIds,
+            };
+          }
+        }
+
+        return { success: false, message: 'No new tags to add for lead' };
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to execute post-tag automation: ${error.message} in tag automation`,
+      );
+      throw error;
+    }
+  }
 
   @Process('process-tag-time-delay')
   async processTagTimeDelay(job: Job) {
@@ -87,12 +543,15 @@ export class TagTimeDelayProcessor {
 
       if (invoiceId) {
         invoice = await this.globalRepository.findInvoiceById(
-          invoiceId,
-          companyId,
+          invoiceId as string,
+          companyId as number,
           'Invoice',
         );
       } else {
-        lead = await this.globalRepository.findLeadById(leadId, companyId);
+        lead = await this.globalRepository.findLeadById(
+          leadId as number,
+          companyId as number,
+        );
       }
 
       if (
@@ -100,393 +559,44 @@ export class TagTimeDelayProcessor {
         tagId &&
         rule?.tagAutomationPipeline?.targetColumnId
       ) {
-        if (invoiceId && rule?.pipelineType === 'SHOP') {
-          const updateInvoiceColumnId =
-            await this.globalRepository.updateEstimateColumn({
-              companyId,
-              estimateId: invoiceId,
-              targetedColumnId: rule?.tagAutomationPipeline?.targetColumnId,
-            });
-
-          if (updateInvoiceColumnId) {
-            this.logger.log(
-              `The tag automation condition pipeline with shop successfully, invoice id ${invoiceId}`,
-            );
-            await this.tagAutomationTriggerService.update({
-              columnId: updateInvoiceColumnId.columnId!,
-              companyId: companyId,
-              pipelineType: 'SHOP',
-              invoiceId: invoiceId,
-              conditionType: 'post_tag',
-            });
-          }
-        }
-        if (leadId && rule?.pipelineType === 'SALES') {
-          const updateLeadColumnId =
-            await this.globalRepository.updatePipelineLeadColumn({
-              companyId,
-              leadId,
-              targetedColumnId: rule?.tagAutomationPipeline?.targetColumnId,
-            });
-          if (updateLeadColumnId) {
-            this.logger.log(
-              `The tag automation condition pipeline with sales successfully, lead id ${leadId}`,
-            );
-            await this.tagAutomationTriggerService.update({
-              columnId: updateLeadColumnId.columnId!,
-              companyId: companyId,
-              pipelineType: 'SALES',
-              leadId: leadId,
-              conditionType: 'post_tag',
-            });
-          }
-        }
-
-        return {
-          statusCode: 200,
-          reason: 'Tag automation successfully triggered!',
-        };
+        return await this.handlePipelineAutomation({
+          companyId,
+          tagId,
+          rule,
+          leadId,
+          invoiceId,
+        });
       } else if (
         conditionType === 'communication' &&
         tagId &&
         rule?.tagAutomationCommunication
       ) {
-        if (
-          rule?.tagAutomationCommunication?.isSendWeekDays ||
-          rule?.tagAutomationCommunication?.isSendOfficeHours
-        ) {
-          const shouldExecute =
-            await this.tagAutomationTriggerService.shouldExecuteTagAutomation(
-              ruleId as number,
-              new Date(),
-            );
-
-          if (!shouldExecute) {
-            this.logger.log(
-              `Rule ${ruleId} is restricted by time settings (weekdays: ${rule?.tagAutomationCommunication?.isSendWeekDays}, office hours: ${rule?.tagAutomationCommunication?.isSendOfficeHours}). Current time is outside execution window. Rescheduling for next valid time.`,
-            );
-
-            try {
-              // Get the next valid business day and time
-              const nextValidTime =
-                await this.tagAutomationTriggerService.getAdjustedExecutionDateForTag(
-                  ruleId as number,
-                  new Date(),
-                  0, // No additional delay
-                );
-
-              // Update the execution time
-              await this.globalRepository.updateExecutionTime(
-                executionId as number,
-                nextValidTime,
-              );
-
-              // Calculate new delay in milliseconds
-              const delayMs = nextValidTime.getTime() - Date.now();
-
-              // Re-queue the job with the new delay
-              if (delayMs > 0) {
-                const execution =
-                  await this.globalRepository.findTimeDelayExecution(
-                    executionId as number,
-                  );
-
-                if (!execution) {
-                  throw new Error(`Execution record ${executionId} not found`);
-                }
-
-                if (!invoice?.id) {
-                  await this.timeDelayQueue.add(
-                    'process-tag-time-delay',
-                    {
-                      executionId,
-                      ruleId,
-                      columnId: execution.columnId,
-                      companyId,
-                      leadId,
-                      conditionType,
-                      tagId,
-                      invoiceId,
-                    },
-                    {
-                      delay: delayMs,
-                      jobId: `${executionId}_rescheduled`,
-                      removeOnComplete: true,
-                    },
-                  );
-                } else {
-                  await this.timeDelayQueue.add(
-                    'process-tag-time-delay',
-                    {
-                      executionId,
-                      ruleId,
-                      columnId: execution.columnId,
-                      companyId,
-                      leadId,
-                      conditionType,
-                      tagId,
-                      invoiceId,
-                    },
-                    {
-                      delay: delayMs,
-                      jobId: `${executionId}_rescheduled`,
-                      removeOnComplete: true,
-                    },
-                  );
-                }
-
-                this.logger.log(
-                  // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-                  `Rescheduled job for execution at ${nextValidTime}`,
-                );
-              }
-
-              return {
-                success: false,
-                reason:
-                  'Rule set to execute only on weekdays during active hours. Rescheduled for next valid time.',
-              };
-            } catch (error) {
-              this.logger.error(`Failed to reschedule job: ${error.message}`);
-              await this.globalRepository.updateExecutionStatus(
-                executionId as number,
-                ExecutionStatus.CANCELLED,
-              );
-              return {
-                success: false,
-                reason: 'Failed to reschedule for next valid time',
-              };
-            }
-          }
-        }
-
-        // Check if lead still exists and is in the right column
-        const lead = (await this.globalRepository.findLeadById(
-          leadId as number,
-          companyId as number,
-          {
-            include: {
-              Client: true,
-            },
-          },
-        )) as Lead & { Client: Client[] };
-
-        const vehicleInfo = lead.vehicleId
-          ? await this.globalRepository.findVehicleById(lead.vehicleId, {
-              select: { id: true, make: true, model: true, year: true },
-            })
-          : invoice?.vehicleId
-            ? await this.globalRepository.findVehicleById(invoice.vehicleId, {
-                select: { id: true, make: true, model: true, year: true },
-              })
-            : null;
-
-        const companyInfo = await this.globalRepository.findCompanyById(
-          companyId as number,
-          {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-              address: true,
-              email: true,
-              smsGateway: true,
-            },
-          },
-        );
-
-        const placeholdersValue: TPlaceholder = {
-          contactName: `${lead ? lead?.clientName : invoice?.client?.firstName}`,
-          vehicle: vehicleInfo
-            ? `${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}`
-            : '',
-          businessName: companyInfo?.name || '',
-          businessPhone: companyInfo?.phone || '',
-          businessAddress: companyInfo?.address || '',
-          videoDirection: 'N/A',
-          googleMapLink: 'N/A',
-        };
-        // send email for column change
-        const formattedEmailBody = this.mailUtils.formatBody(
-          rule?.tagAutomationCommunication?.emailBody || '',
-          placeholdersValue,
-        );
-
-        const formattedSmsBody = this.mailUtils.formatBody(
-          rule?.tagAutomationCommunication?.smsBody || '',
-          placeholdersValue,
-        );
-
-        const attachmentUrls =
-          rule?.tagAutomationCommunication?.attachments.map(
-            (attachment) => attachment.fileUrl,
-          );
-
-        if (
-          rule?.tagAutomationCommunication?.communicationType === 'EMAIL' ||
-          rule?.tagAutomationCommunication?.communicationType === 'BOTH'
-        ) {
-          await this.mailService.sendEmail({
-            subject: rule?.tagAutomationCommunication?.subject || '',
-            clientEmail: lead
-              ? lead.clientEmail!
-              : invoice
-                ? invoice.client.email!
-                : ' ',
-            emailBody: formattedEmailBody,
-            companyEmail: companyInfo?.email || '',
-            companyId: companyId,
-            attachments: attachmentUrls,
-            clientId: vehicleInfo?.clientId ?? lead.clientId!,
-          });
-        }
-
-        if (
-          rule?.tagAutomationCommunication?.communicationType === 'SMS' ||
-          rule?.tagAutomationCommunication?.communicationType === 'BOTH'
-        ) {
-          if (
-            companyInfo &&
-            lead.Client.length > 0 &&
-            lead.Client?.[0]?.mobile &&
-            isValidUSMobile(lead.Client?.[0]?.mobile)
-          ) {
-            try {
-              if (companyInfo.smsGateway === 'TWILIO') {
-                await this.smsService.sendSms({
-                  companyId: companyId,
-                  clientId: lead.Client?.[0]?.id ?? lead.clientId,
-                  message: formattedSmsBody,
-                  attachments: attachmentUrls,
-                });
-              } else if (companyInfo.smsGateway === 'INFOBIP') {
-                await this.infobipSms.sendInfobipSms({
-                  companyId: companyId,
-                  clientId: lead.Client?.[0]?.id ?? lead.clientId,
-                  message: formattedSmsBody,
-                  attachments: attachmentUrls,
-                });
-              }
-            } catch (error) {
-              this.logger.error(`Failed to send SMS: ${error.message}`);
-            }
-          }
-        }
-
-        if (
-          rule?.tagAutomationCommunication?.communicationType === 'SMS' ||
-          rule?.tagAutomationCommunication?.communicationType === 'BOTH'
-        ) {
-          if (
-            companyInfo &&
-            invoice?.client &&
-            invoice?.client.mobile &&
-            isValidUSMobile(invoice?.client.mobile)
-          ) {
-            try {
-              if (companyInfo.smsGateway === 'TWILIO') {
-                await this.smsService.sendSms({
-                  companyId: companyId,
-                  clientId: invoice.clientId! ?? invoice.clientId,
-                  message: formattedSmsBody,
-                  attachments: attachmentUrls,
-                });
-              } else if (companyInfo.smsGateway === 'INFOBIP') {
-                await this.infobipSms.sendInfobipSms({
-                  companyId: companyId,
-                  clientId: invoice.clientId! ?? invoice.clientId,
-                  message: formattedSmsBody,
-                  attachments: attachmentUrls,
-                });
-              }
-            } catch (error) {
-              this.logger.error(`Failed to send SMS: ${error.message}`);
-            }
-          }
-        }
-
-        // Update execution status to COMPLETED
-        await this.globalRepository.updateExecutionStatus(
-          executionId as number,
-          ExecutionStatus.COMPLETED,
-        );
+        await this.handleCommunicationAutomation({
+          companyId,
+          rule,
+          ruleId,
+          executionId,
+          leadId,
+          invoiceId,
+          invoice,
+          tagId,
+          conditionType: 'communication',
+        });
       } else if (
         conditionType === 'post_tag' &&
         !tagId &&
         rule?.PostTagAutomationColumn
       ) {
-        if (invoiceId) {
-          if (rule?.ruleType === 'one_time' && invoice?.isTriggered) {
-            this.logger.log(
-              `The tag automation post tag already triggered on this invoice ${invoice?.id} id!`,
-            );
+        const postTagResult = await this.handlePostTagAutomation({
+          companyId,
+          rule,
+          leadId,
+          invoiceId,
+          invoice,
+          lead,
+        });
 
-            return;
-          }
-
-          const invoiceTags = invoice?.tags || [];
-
-          const ruleTags = rule?.tag || [];
-
-          const existingTagIds = invoiceTags.map((t: InvoiceTags) => t.tagId);
-          const ruleTagIds = ruleTags.map((t) => t.id);
-
-          // Step 2: find missing tags
-          const missingTagIds = ruleTagIds.filter(
-            (id) => !existingTagIds.includes(id),
-          );
-
-          if (missingTagIds.length > 0) {
-            const updatedLead =
-              await this.globalRepository.updatePipelineInvoiceTags({
-                invoiceId,
-                companyId,
-                tags: missingTagIds,
-              });
-
-            if (updatedLead) {
-              this.logger.log(
-                `The tag automation post tag created on lead: ${invoice?.id} id!`,
-              );
-            }
-          }
-        } else {
-          if (rule?.ruleType === 'one_time' && lead?.isTriggered) {
-            this.logger.log(
-              `The tag automation post tag already triggered on this lead ${lead?.id} id!`,
-            );
-
-            return;
-          }
-
-          const leadTags = lead?.leadTags || [];
-
-          const ruleTags = rule?.tag || [];
-
-          const existingTagIds = leadTags.map((t: LeadTags) => t.tagId);
-          const ruleTagIds = ruleTags.map((t) => t.id);
-
-          console.log('existingTagIds', existingTagIds);
-          // Step 2: find missing tags
-          const missingTagIds = ruleTagIds.filter(
-            (id) => !existingTagIds.includes(id),
-          );
-          console.log('missingTagIds', missingTagIds);
-          if (missingTagIds.length > 0) {
-            const updatedLead =
-              await this.globalRepository.updatePipelineLeadTags({
-                leadId,
-                companyId,
-                tags: missingTagIds,
-              });
-            console.log('updatedLead', updatedLead);
-            if (updatedLead) {
-              this.logger.log(
-                `The tag automation post tag created on lead: ${lead?.id} id!`,
-              );
-            }
-          }
-        }
+        return postTagResult;
       }
 
       return {
@@ -504,7 +614,7 @@ export class TagTimeDelayProcessor {
       );
       return {
         statusCode: 500,
-        reason: 'Execution failed',
+        reason: 'Execution failed in tag automation!',
         error: error.message,
       };
     }

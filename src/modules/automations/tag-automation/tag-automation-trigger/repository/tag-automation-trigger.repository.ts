@@ -39,7 +39,9 @@ export class TagAutomationTriggerRepository {
     });
 
     if (!result || result.length === 0) {
-      throw new NotFoundException('Tag automation rules not found');
+      this.logger.warn(
+        'No applicable active tag automation rule found for this company',
+      );
     }
 
     return result;
