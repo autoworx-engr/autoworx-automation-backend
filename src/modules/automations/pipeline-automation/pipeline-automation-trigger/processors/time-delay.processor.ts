@@ -5,6 +5,7 @@ import { ExecutionStatus } from '@prisma/client';
 import { PipelineAutomationTriggerRepository } from '../repository/pipeline-automation-trigger.repository';
 import { TimeDelayRuleService } from '../services/time-delay-rule.service';
 import { CommunicationAutomationRuleService } from '../services/communication-automation-rule.service';
+import { TagAutomationTriggerService } from 'src/modules/automations/tag-automation/tag-automation-trigger/services/tag-automation-trigger.service';
 
 @Processor('pipeline-time-delay')
 export class TimeDelayProcessor {
@@ -13,6 +14,7 @@ export class TimeDelayProcessor {
     private readonly pipelineAutomationTriggerRepo: PipelineAutomationTriggerRepository,
     private readonly timeDelayRuleService: TimeDelayRuleService,
     private readonly communicationAutomationRuleService: CommunicationAutomationRuleService,
+    private readonly tagAutomationTriggerService: TagAutomationTriggerService,
   ) {}
 
   @Process('process-time-delay')
@@ -71,11 +73,24 @@ export class TimeDelayProcessor {
         );
         return { success: false, reason: 'Lead column changed' };
       } // Update lead column
-      await this.pipelineAutomationTriggerRepo.updatePipelineLeadColumn({
-        companyId,
-        leadId,
-        targetedColumnId: rule.targetColumnId,
-      }); // Check for time delay rules in the updated column
+      const updatedLead =
+        await this.pipelineAutomationTriggerRepo.updatePipelineLeadColumn({
+          companyId,
+          leadId,
+          targetedColumnId: rule.targetColumnId,
+        });
+
+      if (updatedLead) {
+        await this.tagAutomationTriggerService.update({
+          columnId: updatedLead.columnId!,
+          companyId,
+          pipelineType: 'SALES',
+          leadId,
+          conditionType: 'post_tag',
+        });
+      }
+
+      // Check for time delay rules in the updated column
       await this.timeDelayRuleService.checkAndExecuteTimeDelayInUpdatedColumn(
         companyId,
         leadId,

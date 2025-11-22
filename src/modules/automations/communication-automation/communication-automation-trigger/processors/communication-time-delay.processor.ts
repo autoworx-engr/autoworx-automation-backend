@@ -17,11 +17,13 @@ import { CommunicationAutomationTriggerService } from '../communication-automati
 import { ICommunicationAutomationTrigger } from '../interfaces/communication-automation-trigger.interface';
 import { Client, ExecutionStatus, Lead } from '@prisma/client';
 import { isValidUSMobile } from 'src/shared/global-service/utils/isValidUSMobile';
+import { TagAutomationTriggerService } from 'src/modules/automations/tag-automation/tag-automation-trigger/services/tag-automation-trigger.service';
 
 @Processor('communication-time-delay')
 export class CommunicationTimeDelayProcessor {
   constructor(
     private readonly communicationAutomationRepository: CommunicationAutomationTriggerRepository,
+    private readonly tagAutomationTriggerService: TagAutomationTriggerService,
     private readonly globalRepository: GlobalRepository,
     private readonly mailUtils: MailUtils,
     private readonly smsService: SmsService,
@@ -272,11 +274,21 @@ export class CommunicationTimeDelayProcessor {
 
     // update pipeline lead column
     if (rule.targetColumnId) {
-      await this.globalRepository.updatePipelineLeadColumn({
+      const updatedLead = await this.globalRepository.updatePipelineLeadColumn({
         companyId,
         leadId,
         targetedColumnId: rule.targetColumnId,
       });
+
+      if (updatedLead) {
+        await this.tagAutomationTriggerService.update({
+          columnId: updatedLead.columnId!,
+          companyId,
+          pipelineType: 'SALES',
+          leadId,
+          conditionType: 'post_tag',
+        });
+      }
 
       this.logger.log(
         `Lead ${leadId} moved to column ${rule.targetColumnId} successfully`,
