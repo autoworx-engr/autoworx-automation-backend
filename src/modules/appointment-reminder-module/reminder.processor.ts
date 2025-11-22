@@ -1,12 +1,18 @@
 // src/queues/reminder.processor.ts
+import { HttpService } from '@nestjs/axios';
 import { Process, Processor } from '@nestjs/bull';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Job } from 'bull';
-import { Injectable } from '@nestjs/common';
+import * as moment from 'moment-timezone';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MailService } from 'src/shared/global-service/sendEmail/mail.service';
-import { SmsService } from 'src/shared/global-service/sendSms/sms.service';
 import { InfobipSmsService } from 'src/shared/global-service/sendInfobipSms/infobip-sms.service';
-import * as moment from 'moment-timezone';
+import { SmsService } from 'src/shared/global-service/sendSms/sms.service';
+
+import { catchError, map } from 'rxjs/operators';
+import { firstValueFrom } from 'rxjs';
+import { User } from '@prisma/client';
 
 @Processor('reminder-queue')
 @Injectable()
@@ -16,6 +22,9 @@ export class ReminderProcessor {
     private readonly mailService: MailService,
     private readonly sms: SmsService,
     private readonly infobipSms: InfobipSmsService,
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+    private readonly logger: Logger,
   ) {}
 
   @Process('send-reminder')
@@ -167,6 +176,74 @@ export class ReminderProcessor {
         console.log(
           '🚀 ~ ReminderProcessor ~ handleReminder ~ Infobip SMS sent',
         );
+      }
+
+      try {
+        const findCompanyUser = await this.prisma.user.findMany({
+          where: {
+            companyId: appointment.companyId,
+            OR: [
+              {
+                employeeType: 'Admin',
+              },
+              {
+                employeeType: 'Manager',
+              },
+              {
+                employeeType: 'Sales',
+              },
+            ],
+          },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            email: true,
+          },
+        });
+
+        await Promise.all(
+          findCompanyUser.map(async (user: User) => {
+            const requestBody = {
+              userId: user.id,
+              userName: user.firstName + ' ' + user.lastName,
+              userPhoneNo: user.phone,
+              userEmail: user.email,
+              companyId: appointment.companyId,
+              title: 'Appointment Reminder',
+              description: `Your appointment with ${appointment?.client?.firstName} ${appointment?.client?.lastName} is scheduled for ${appointmentDateTime.format('ddd, MMM D, h:mm A')}.`,
+              iconType: 'task',
+              // redirectUrl: string;
+            };
+            await firstValueFrom(
+              this.httpService
+                .post(
+                  this.configService.get<string>('sendNotificationApiUrl')!,
+                  requestBody,
+                )
+                .pipe(
+                  map((response) => response),
+                  catchError((error: any) => {
+                    if (error.response) {
+                      this.logger.error(
+                        `Failed to send notification - Status: ${error.response.success}`,
+                        error.response.message,
+                      );
+                    } else {
+                      this.logger.error(
+                        'Failed to generate token',
+                        error.message,
+                      );
+                    }
+                    throw new Error('Failed to send notification');
+                  }),
+                ),
+            );
+          }),
+        );
+      } catch (error) {
+        this.logger.error('Failed to send notification:', error.message);
       }
     } catch (error) {
       console.error('Failed to send SMS:', error.message);
