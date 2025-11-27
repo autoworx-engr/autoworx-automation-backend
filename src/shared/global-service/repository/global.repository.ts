@@ -31,6 +31,25 @@ export class GlobalRepository {
     }
     return lead;
   }
+  async findUniqueLeadById(
+    leadId: number,
+    params?: Omit<Parameters<typeof this.prisma.lead.findUnique>[0], 'where'>,
+  ) {
+    const lead = await this.prisma.lead.findUnique({
+      where: {
+        id: leadId,
+      },
+      ...params,
+      include: {
+        leadTags: true,
+        Client: true,
+      },
+    });
+    if (!lead) {
+      throw new Error('Lead not found');
+    }
+    return lead;
+  }
   async findInvoiceById(
     invoiceId: string,
     companyId: number,
