@@ -40,6 +40,10 @@ export class TagTimeDelayProcessor {
     if (!tagId || !rule?.tagAutomationPipeline?.targetColumnId) {
       return { success: false, message: 'Invalid pipeline configuration' };
     }
+
+    this.logger.log(
+      `Trigger tag automation condition type is post tag and pipeline type ${rule?.pipelineType}`,
+    );
     //* INVOICE-BASED pipeline TAG AUTOMATION ---
     if (invoiceId && rule?.pipelineType === 'SHOP') {
       const updatedInvoice = await this.globalRepository.updateEstimateColumn({
@@ -111,6 +115,10 @@ export class TagTimeDelayProcessor {
     tagId,
     conditionType,
   }) {
+    this.logger.log(
+      `Trigger tag automation condition type is communication and pipeline type ${rule?.pipelineType}`,
+    );
+
     if (
       rule?.tagAutomationCommunication?.isSendWeekDays ||
       rule?.tagAutomationCommunication?.isSendOfficeHours
@@ -221,25 +229,37 @@ export class TagTimeDelayProcessor {
     }
 
     // Check if lead still exists and is in the right column
-    const lead = (await this.globalRepository.findLeadById(
-      leadId as number,
-      companyId as number,
-      {
+
+    let lead: any = null;
+    if (leadId) {
+      lead = (await this.globalRepository.findUniqueLeadById(leadId as number, {
         include: {
           Client: true,
         },
-      },
-    )) as Lead & { Client: Client[] };
+      })) as Lead & { Client: Client[] };
+    }
 
-    const vehicleInfo = lead.vehicleId
-      ? await this.globalRepository.findVehicleById(lead.vehicleId, {
-          select: { id: true, make: true, model: true, year: true },
+    const vehicleInfo = lead?.vehicleId
+      ? await this.globalRepository.findVehicleById(lead?.vehicleId, {
+          select: {
+            id: true,
+            make: true,
+            model: true,
+            year: true,
+            clientId: true,
+          },
         })
       : invoice?.vehicleId
         ? await this.globalRepository.findVehicleById(
             invoice.vehicleId as number,
             {
-              select: { id: true, make: true, model: true, year: true },
+              select: {
+                id: true,
+                make: true,
+                model: true,
+                year: true,
+                clientId: true,
+              },
             },
           )
         : null;
@@ -290,16 +310,17 @@ export class TagTimeDelayProcessor {
     ) {
       await this.mailService.sendEmail({
         subject: rule?.tagAutomationCommunication?.subject || '',
-        clientEmail: lead
-          ? lead.clientEmail!
-          : invoice
-            ? invoice.client.email!
-            : ' ',
+        clientEmail:
+          rule.pipelineType === 'SALES'
+            ? lead.clientEmail!
+            : invoice
+              ? invoice.client?.email
+              : ' ',
         emailBody: formattedEmailBody,
         companyEmail: companyInfo?.email || '',
         companyId: companyId,
         attachments: attachmentUrls,
-        clientId: vehicleInfo?.clientId ?? lead.clientId!,
+        clientId: vehicleInfo?.clientId ?? (lead.clientId || invoice?.clientId),
       });
     }
 
@@ -389,9 +410,12 @@ export class TagTimeDelayProcessor {
     invoice?: any;
     lead?: any;
   }) {
+    this.logger.log(
+      `Trigger tag automation condition type is post tag and pipeline type ${rule?.pipelineType}`,
+    );
     try {
       //* INVOICE-BASED POST TAG AUTOMATION ---
-      if (invoiceId) {
+      if (invoiceId && rule?.pipelineType === 'SHOP') {
         // Prevent duplicate one-time trigger
         if (rule?.ruleType === 'one_time' && invoice?.isTriggered) {
           this.logger.log(
@@ -441,7 +465,7 @@ export class TagTimeDelayProcessor {
       }
 
       //* LEAD-BASED POST TAG AUTOMATION ---
-      if (leadId) {
+      if (leadId && rule?.pipelineType === 'SALES') {
         // Prevent duplicate one-time trigger
         if (rule?.ruleType === 'one_time' && lead?.isTriggered) {
           this.logger.log(

@@ -7,7 +7,7 @@ import { TagAutomationTriggerRepository } from '../repository/tag-automation-tri
 import { IScheduleTimeDelayTagAutomation } from 'src/modules/automations/communication-automation/communication-automation-trigger/interfaces/communication-automation-trigger.interface';
 import { UpdateTagAutomationTriggerDto } from '../dto/update-tag-automation-trigger.dto';
 import { Column, Invoice, Lead, Tag, TagAutomationRule } from '@prisma/client';
-import moment from 'moment';
+import * as moment from 'moment-timezone';
 import { CommunicationAutomationTriggerRepository } from 'src/modules/automations/communication-automation/communication-automation-trigger/repository/communication-automation-trigger.repository';
 import { TagAutomationRuleWithRelations } from 'src/common/types/tagAutomationRule';
 
