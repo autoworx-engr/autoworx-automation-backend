@@ -15,7 +15,10 @@ async function bootstrap() {
 
   // Bull Board setup
   const serverAdapter = new ExpressAdapter();
-  serverAdapter.setBasePath('/admin/queues');
+
+  if (process.env.NODE_ENV === 'development') {
+    serverAdapter.setBasePath('/admin/queues');
+  }
 
   try {
     const queueNames = [
@@ -49,7 +52,9 @@ async function bootstrap() {
         queues,
         serverAdapter,
       });
-      app.use('/admin/queues', serverAdapter.getRouter());
+      if (process.env.NODE_ENV === 'development') {
+        app.use('/admin/queues', serverAdapter.getRouter());
+      }
       console.log(`🎯 Bull Board configured with ${queues.length} queues`);
     }
   } catch (error) {
