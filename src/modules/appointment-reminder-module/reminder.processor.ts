@@ -232,7 +232,7 @@ export class ReminderProcessor {
                       );
                     } else {
                       this.logger.error(
-                        'Failed to generate token',
+                        'Failed to send notification',
                         error.message,
                       );
                     }
@@ -241,6 +241,9 @@ export class ReminderProcessor {
                 ),
             );
           }),
+        );
+        console.log(
+          '🚀 ~ ReminderProcessor ~ handleReminder ~ Notifications sent to company users',
         );
       } catch (error) {
         this.logger.error('Failed to send notification:', error.message);
