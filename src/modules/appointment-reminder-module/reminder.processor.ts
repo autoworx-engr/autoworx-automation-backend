@@ -219,7 +219,7 @@ export class ReminderProcessor {
             await firstValueFrom(
               this.httpService
                 .post(
-                  this.configService.get<string>('sendNotificationApiUrl')!,
+                  `${this.configService.get<string>('frontendUrl')!}/api/send-notification`,
                   requestBody,
                 )
                 .pipe(

@@ -9,7 +9,7 @@ export default () => ({
     domain: process.env.MAILGUN_DOMAIN || '',
   },
   node_env: process.env.NODE_ENV || 'development',
-  sendNotificationApiUrl: process.env.SEND_NOTIFICATION_API_URL,
+  frontendUrl: process.env.FRONTEND_URL,
   redis: {
     url: process.env.REDIS_URL,
     host: process.env.REDISHOST || process.env.REDIS_HOST || 'localhost',
