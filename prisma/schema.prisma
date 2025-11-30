@@ -1422,11 +1422,12 @@ model Technician {
   priority      Priority? @default(Low)
   status        String?
   note          String?   @map("new_note") @db.VarChar(1500)
+  technicianNote  String?   @map("technician_note") @db.VarChar(1500)
   serviceId     Int       @map("service_id")
   invoiceId     String    @map("invoice_id")
   companyId     Int       @map("company_id")
   invoiceItemId Int       @map("invoice_item_id")
-
+  images       TechnicianImage[]   
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @default(now()) @updatedAt @map("updated_at")
   vehicleParts VehicleParts[]
@@ -1438,6 +1439,16 @@ model Technician {
   invoiceItem  InvoiceItem    @relation(fields: [invoiceItemId], references: [id], onDelete: Cascade)
 }
 
+model TechnicianImage {
+  id            Int      @id @default(autoincrement())
+  technicianId  Int
+  fileUrl       String   @db.VarChar(2048) 
+  uploadedAt    DateTime @default(now()) 
+  
+  technician    Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+  
+  @@map("technician_images")
+}
 model InvoiceRedo {
   id           Int      @id @default(autoincrement())
   invoiceId    String   @map("invoice_id")
