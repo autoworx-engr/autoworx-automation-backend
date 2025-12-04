@@ -7,7 +7,6 @@ import { LeadRowDto } from './dto/create-bulk-lead-upload.dto';
 interface BulkLeadJobData {
   leads: LeadRowDto[];
   companyId: number;
-  columnId?: number;
 }
 
 @Processor('bulk-lead-upload')
@@ -66,7 +65,7 @@ export class BulkLeadUploadProcessor {
 
   @Process('process-bulk-leads')
   async handleBulkLeadUpload(job: Job<BulkLeadJobData>) {
-    const { leads, companyId, columnId } = job.data;
+    const { leads, companyId } = job.data;
     this.logger.log(
       `Processing bulk lead upload for company ${companyId} with ${leads.length} leads`,
     );
