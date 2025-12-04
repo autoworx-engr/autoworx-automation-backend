@@ -17,7 +17,6 @@ export class BulkLeadUploadService {
   async processFile(
     file: Express.Multer.File,
     companyId: number,
-    columnId?: number,
   ): Promise<BulkLeadUploadResponseDto> {
     try {
       const leads = await this.parseFile(file);
@@ -30,7 +29,6 @@ export class BulkLeadUploadService {
       const job = await this.bulkLeadQueue.add('process-bulk-leads', {
         leads,
         companyId,
-        columnId,
       });
 
       return {

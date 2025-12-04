@@ -32,10 +32,6 @@ export class BulkLeadUploadController {
         companyId: {
           type: 'number',
         },
-        columnId: {
-          type: 'number',
-          description: 'Pipeline column/stage ID',
-        },
       },
     },
   })
@@ -43,7 +39,6 @@ export class BulkLeadUploadController {
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Body('companyId') companyId: string,
-    @Body('columnId') columnId?: string,
   ): Promise<BulkLeadUploadResponseDto> {
     if (!file) {
       throw new BadRequestException('File is required');
@@ -65,11 +60,7 @@ export class BulkLeadUploadController {
       );
     }
 
-    return this.bulkLeadUploadService.processFile(
-      file,
-      parseInt(companyId),
-      columnId ? parseInt(columnId) : undefined,
-    );
+    return this.bulkLeadUploadService.processFile(file, parseInt(companyId));
   }
 
   @Get('status/:jobId')
