@@ -60,7 +60,7 @@ export class BulkLeadUploadService {
           name: row['name'] || row['Name'] || '',
           email: row['email'] || row['Email'] || '',
           contact: String(row['contact'] || row['Contact'] || ''),
-          vehicle: row['vehicle'] || row['Vehicle'] || '',
+          vehicle: row['vehicle(year make model)'] || row['vehicle(year-make-model)'] || row['vehicle'] || row['Vehicle'] || '',
           source: row['source'] || row['Source'] || 'Bulk Upload',
           created_at: row['created_at'] || row['Created At'] || '',
         };

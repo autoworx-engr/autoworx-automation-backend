@@ -21,8 +21,15 @@ export class BulkLeadUploadProcessor {
     make: string | null;
     model: string | null;
   } {
-    // Expected format: year-make-model or variations
-    const parts = vehicleStr.split('-').map(p => p.trim());
+    // Expected formats: 
+    // - "2002 toyota test" (space-separated)
+    // - "2002-toyota-test" (dash-separated)
+    // Try space-separated first, then dash-separated
+    let parts = vehicleStr.trim().split(/\s+/);
+    if (parts.length === 1) {
+      // If no spaces, try dash-separated
+      parts = vehicleStr.split('-').map(p => p.trim());
+    }
     
     const result = {
       year: null as number | null,
@@ -137,9 +144,11 @@ export class BulkLeadUploadProcessor {
         this.logger.debug(`Created client ${client.id} for ${leadData.name}`);
 
         // Step 3: Parse and create/find vehicle
+        this.logger.debug(`Vehicle data from CSV: "${leadData.vehicle}"`);
         let vehicleId: number | undefined;
         if (leadData.vehicle && leadData.vehicle.trim()) {
           const vehicleInfo = this.parseVehicleInfo(leadData.vehicle);
+          this.logger.debug(`Parsed vehicle info: ${JSON.stringify(vehicleInfo)}`);
           
           if (vehicleInfo.year || vehicleInfo.make || vehicleInfo.model) {
             // Check if vehicle exists for this client
@@ -170,6 +179,8 @@ export class BulkLeadUploadProcessor {
               vehicleId = vehicle.id;
               this.logger.debug(`Created vehicle ${vehicleId} for client ${client.id}`);
             }
+          } else {
+            this.logger.warn(`Could not parse vehicle info from: ${leadData.vehicle}`);
           }
         }
 
