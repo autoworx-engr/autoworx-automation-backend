@@ -24,6 +24,7 @@ import { GlobalModule } from './shared/global-service/global.module';
 
 import { ReminderModule } from './modules/appointment-reminder-module/reminder.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { BulkLeadUploadModule } from './modules/bulk-lead-upload/bulk-lead-upload.module';
 @Global()
 @Module({
   imports: [
@@ -137,6 +138,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     AdminPermissionModule,
     ReminderModule,
     NotificationModule,
+    BulkLeadUploadModule,
   ],
   controllers: [],
   providers: [],
