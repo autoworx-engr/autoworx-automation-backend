@@ -14,10 +14,12 @@ import { isValidUSMobile } from 'src/shared/global-service/utils/isValidUSMobile
 import { TagAutomationTriggerRepository } from '../repository/tag-automation-trigger.repository';
 import { TagAutomationRuleWithRelations } from 'src/common/types/tagAutomationRule';
 import { TagAutomationTriggerService } from '../services/tag-automation-trigger.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Processor('tag-time-delay')
 export class TagTimeDelayProcessor {
   constructor(
+    private readonly prisma: PrismaService,
     private readonly globalRepository: GlobalRepository,
     private readonly tagAutomationRepository: TagAutomationTriggerRepository,
     private readonly mailUtils: MailUtils,
@@ -330,6 +332,7 @@ export class TagTimeDelayProcessor {
     ) {
       if (
         companyInfo &&
+        rule.pipelineType === 'SALES' &&
         lead.Client.length > 0 &&
         lead.Client?.[0]?.mobile &&
         isValidUSMobile(lead.Client?.[0]?.mobile)
@@ -362,6 +365,7 @@ export class TagTimeDelayProcessor {
     ) {
       if (
         companyInfo &&
+        rule.pipelineType === 'SHOP' &&
         invoice?.client &&
         invoice?.client.mobile &&
         isValidUSMobile(invoice?.client.mobile as string)
@@ -428,12 +432,15 @@ export class TagTimeDelayProcessor {
         }
 
         // Collect existing and rule tags
-        const invoiceTags = invoice?.tags || [];
+        // const invoiceTags = invoice?.tags || [];
         const ruleTags = rule?.tag || [];
 
-        const existingTagIds = invoiceTags.map(
-          (t: { tagId: number }) => t.tagId,
-        );
+        const existing = await this.prisma.invoiceTags.findMany({
+          where: { invoiceId },
+          select: { tagId: true },
+        });
+        const existingTagIds = existing.map((t) => t.tagId);
+
         const ruleTagIds = ruleTags.map((t: { id: number }) => t.id);
 
         // Find missing tags

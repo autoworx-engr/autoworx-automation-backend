@@ -6,6 +6,7 @@ import { TagTimeDelayProcessor } from './processors/tag-automation-time-delay-pr
 import { TagAutomationTriggerController } from './controllers/tag-automation-trigger.controller';
 import { CommunicationAutomationTriggerRepository } from '../../communication-automation/communication-automation-trigger/repository/communication-automation-trigger.repository';
 import { GlobalRepository } from 'src/shared/global-service/repository/global.repository';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { GlobalRepository } from 'src/shared/global-service/repository/global.re
     TagTimeDelayProcessor,
     CommunicationAutomationTriggerRepository,
     GlobalRepository,
+    PrismaService,
   ],
   exports: [TagAutomationTriggerRepository, TagAutomationTriggerService],
 })
