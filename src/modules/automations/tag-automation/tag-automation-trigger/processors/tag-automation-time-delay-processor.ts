@@ -332,6 +332,7 @@ export class TagTimeDelayProcessor {
     ) {
       if (
         companyInfo &&
+        rule.pipelineType === 'SALES' &&
         lead.Client.length > 0 &&
         lead.Client?.[0]?.mobile &&
         isValidUSMobile(lead.Client?.[0]?.mobile)
@@ -364,6 +365,7 @@ export class TagTimeDelayProcessor {
     ) {
       if (
         companyInfo &&
+        rule.pipelineType === 'SHOP' &&
         invoice?.client &&
         invoice?.client.mobile &&
         isValidUSMobile(invoice?.client.mobile as string)
