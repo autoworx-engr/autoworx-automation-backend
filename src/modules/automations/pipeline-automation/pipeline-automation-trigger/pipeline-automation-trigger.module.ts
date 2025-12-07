@@ -9,6 +9,7 @@ import { TimeDelayService } from './services/time-delay.service';
 import { TimeDelayRuleService } from './services/time-delay-rule.service';
 import { CommunicationAutomationRuleService } from './services/communication-automation-rule.service';
 import { CommunicationAutomationTriggerModule } from '../../communication-automation/communication-automation-trigger/communication-automation-trigger.module';
+import { TagAutomationTriggerModule } from '../../tag-automation/tag-automation-trigger/tag-automation-trigger.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { CommunicationAutomationTriggerModule } from '../../communication-automa
       },
     }),
     forwardRef(() => CommunicationAutomationTriggerModule),
+    TagAutomationTriggerModule,
   ],
   controllers: [PipelineAutomationTriggerController],
   providers: [

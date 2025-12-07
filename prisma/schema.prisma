@@ -765,6 +765,8 @@ model Lead {
   serviceId           Int?
   Service             Service?             @relation(fields: [serviceId], references: [id])
   multipleServices    Service[]            @relation("LeadMultipleServices")
+  Service             Service?             @relation(fields: [serviceId], references: [id])
+  multipleServices    Service[]            @relation("LeadMultipleServices")
   clientId            Int?
   isTriggered         Boolean              @default(false)
   Client              Client[]
@@ -1497,6 +1499,17 @@ model Technician {
   company        Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   InvoiceRedo    InvoiceRedo[]
   invoiceItem    InvoiceItem       @relation(fields: [invoiceItemId], references: [id], onDelete: Cascade)
+}
+
+model TechnicianImage {
+  id           Int      @id @default(autoincrement())
+  technicianId Int
+  fileUrl      String   @db.VarChar(2048)
+  uploadedAt   DateTime @default(now())
+
+  technician Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+
+  @@map("technician_images")
 }
 
 model TechnicianImage {

@@ -4,6 +4,7 @@ import { BullModule } from '@nestjs/bull';
 import { ServiceTimeDelayProcessor } from './processors/service-time-delay.processor';
 import { ServiceAutomationTriggerController } from './controllers/service-automation-trigger.controller';
 import { ServiceAutomationTriggerService } from './services/service-automation-trigger.service';
+import { TagAutomationTriggerModule } from '../../tag-automation/tag-automation-trigger/tag-automation-trigger.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ServiceAutomationTriggerService } from './services/service-automation-t
         removeOnFail: false,
       },
     }),
+    TagAutomationTriggerModule,
   ],
   controllers: [ServiceAutomationTriggerController],
   providers: [
