@@ -1,5 +1,5 @@
 import { BullModule } from '@nestjs/bull';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TagAutomationTriggerRepository } from './repository/tag-automation-trigger.repository';
 import { TagAutomationTriggerService } from './services/tag-automation-trigger.service';
 import { TagTimeDelayProcessor } from './processors/tag-automation-time-delay-processor';
@@ -7,6 +7,8 @@ import { TagAutomationTriggerController } from './controllers/tag-automation-tri
 import { CommunicationAutomationTriggerRepository } from '../../communication-automation/communication-automation-trigger/repository/communication-automation-trigger.repository';
 import { GlobalRepository } from 'src/shared/global-service/repository/global.repository';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ServiceAutomationTriggerModule } from '../../service-automation/service-automation-trigger/service-automation-trigger.module';
+import { PipelineAutomationTriggerModule } from '../../pipeline-automation/pipeline-automation-trigger/pipeline-automation-trigger.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { PrismaService } from 'src/prisma/prisma.service';
         removeOnFail: false,
       },
     }),
+    forwardRef(() => PipelineAutomationTriggerModule),
+    forwardRef(() => ServiceAutomationTriggerModule),
   ],
   controllers: [TagAutomationTriggerController],
   providers: [
