@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsBoolean, IsOptional } from 'class-validator';
 
 export class VinDecoderDto {
@@ -8,6 +9,11 @@ export class VinDecoderDto {
     type: Boolean,
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value as boolean;
+  })
   @IsBoolean()
   verbose: boolean;
 
@@ -17,6 +23,11 @@ export class VinDecoderDto {
     type: Boolean,
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value as boolean;
+  })
   @IsBoolean()
   allTrims: boolean;
 }
