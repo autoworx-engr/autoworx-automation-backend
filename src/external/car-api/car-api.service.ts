@@ -16,6 +16,7 @@ import {
   ModelsResponse,
 } from './interfaces/models.interface';
 import { YearsQueryParams, YearsResponse } from './interfaces/years.interface';
+import { VinDecoderDto } from './dto/vindecoder.dto';
 
 @Injectable()
 export class CarApiService {
@@ -311,6 +312,58 @@ export class CarApiService {
     };
 
     return makeRequest();
+  }
+
+  async getVinDecoder(
+    vin: string,
+    queryParams: VinDecoderDto,
+  ): Promise<Record<string, any>> {
+    if (!vin) {
+      throw new BadRequestException('VIN parameter is required');
+    }
+    // Try to get cached data first
+    const cacheKey = `car_api_vin:${vin}`;
+    const cachedData = await this.cacheManager.get<string>(cacheKey);
+
+    if (cachedData) {
+      return JSON.parse(cachedData) as Record<string, any>;
+    }
+
+    const vinRequest = async () => {
+      await this.getJwtToken();
+
+      const verbose = queryParams.verbose ? 'yes' : 'no';
+      const allTrims = queryParams.allTrims ? 'yes' : 'no';
+
+      const response = await firstValueFrom(
+        this.httpService
+          .get<Record<string, any>>(`${this.baseUrl}/api/vin/${vin}`, {
+            headers: this.getHeaders(),
+            params: {
+              verbose,
+              all_trims: allTrims,
+            },
+          })
+          .pipe(
+            map((response) => response.data),
+            catchError((error) =>
+              this.handleError(error, () =>
+                this.getVinDecoder(vin, queryParams),
+              ),
+            ),
+          ),
+      );
+
+      // Cache the response
+      await this.cacheManager.set(
+        cacheKey,
+        JSON.stringify(response),
+        this.DATA_CACHE_TTL,
+      );
+      return response as Record<string, any>;
+    };
+
+    return vinRequest();
   }
 
   // Method to invalidate all car API caches
