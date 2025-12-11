@@ -69,6 +69,7 @@ export class InvoiceTimeDelayProcessor {
             phone: true,
             address: true,
             email: true,
+            smsGateway: true,
           },
         },
       );
