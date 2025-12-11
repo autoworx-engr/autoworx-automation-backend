@@ -15,6 +15,8 @@ import { TagAutomationTriggerRepository } from '../repository/tag-automation-tri
 import { TagAutomationRuleWithRelations } from 'src/common/types/tagAutomationRule';
 import { TagAutomationTriggerService } from '../services/tag-automation-trigger.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { PipelineAutomationTriggerService } from 'src/modules/automations/pipeline-automation/pipeline-automation-trigger/services/pipeline-automation-trigger.service';
+import { ServiceAutomationTriggerService } from 'src/modules/automations/service-automation/service-automation-trigger/services/service-automation-trigger.service';
 
 @Processor('tag-time-delay')
 export class TagTimeDelayProcessor {
@@ -29,6 +31,8 @@ export class TagTimeDelayProcessor {
     @InjectQueue('tag-time-delay')
     private readonly timeDelayQueue: Queue,
     private readonly tagAutomationTriggerService: TagAutomationTriggerService,
+    private readonly pipelineAutomationTriggerService: PipelineAutomationTriggerService,
+    private readonly serviceMaintenanceAutomationTriggerService: ServiceAutomationTriggerService,
   ) {}
   private readonly logger = new Logger(TagTimeDelayProcessor.name);
 
@@ -63,6 +67,12 @@ export class TagTimeDelayProcessor {
           conditionType: 'post_tag',
         });
 
+        await this.serviceMaintenanceAutomationTriggerService.update({
+          columnId: updatedInvoice.columnId!,
+          companyId,
+          estimateId: updatedInvoice?.id,
+        });
+
         this.logger.log(
           `Pipeline automation (SHOP) executed for invoice ${invoiceId}`,
         );
@@ -89,6 +99,13 @@ export class TagTimeDelayProcessor {
           pipelineType: 'SALES',
           leadId,
           conditionType: 'post_tag',
+        });
+
+        await this.pipelineAutomationTriggerService.update({
+          leadId: updatedLead.id,
+          columnId: updatedLead.columnId!,
+          companyId: companyId,
+          condition: 'TIME_DELAY',
         });
 
         this.logger.log(
