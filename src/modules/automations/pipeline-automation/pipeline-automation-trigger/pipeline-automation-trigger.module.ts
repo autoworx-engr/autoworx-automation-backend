@@ -38,6 +38,7 @@ import { TagAutomationTriggerModule } from '../../tag-automation/tag-automation-
     TimeDelayRuleService,
     PipelineAutomationTriggerRepository,
     TimeDelayService,
+    PipelineAutomationTriggerService,
   ],
 })
 export class PipelineAutomationTriggerModule {}
