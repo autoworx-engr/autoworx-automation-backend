@@ -111,6 +111,7 @@ export class ServiceTimeDelayProcessor {
 
       const placeholdersValue: TPlaceholder = {
         contactName: `${estimate.client.firstName} ${estimate.client.lastName}`,
+        client: `${estimate.client.firstName} ${estimate.client.lastName}`,
         interest: 'N/A',
         vehicle: vehicleInfo
           ? `${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}`

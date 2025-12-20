@@ -65,6 +65,7 @@ export class MarketingAutomationProcessor {
 
     const placeholdersValue: TPlaceholder = {
       contactName: `${client.firstName} ${client.lastName}`,
+      client: `${client.firstName} ${client.lastName}`,
       vehicle: vehicleInfo
         ? `${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}`
         : '',

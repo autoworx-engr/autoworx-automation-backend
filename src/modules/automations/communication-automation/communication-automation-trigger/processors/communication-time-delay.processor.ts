@@ -198,6 +198,7 @@ export class CommunicationTimeDelayProcessor {
 
     const placeholdersValue: TPlaceholder = {
       contactName: `${lead?.clientName}`,
+      client: `${lead?.clientName}`,
       vehicle: vehicleInfo
         ? `${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}`
         : '',
