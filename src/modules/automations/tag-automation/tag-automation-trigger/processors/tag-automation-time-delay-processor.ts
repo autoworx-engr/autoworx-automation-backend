@@ -299,6 +299,7 @@ export class TagTimeDelayProcessor {
 
     const placeholdersValue: TPlaceholder = {
       contactName: `${lead ? lead?.clientName : invoice?.client?.firstName}`,
+      client: `${lead ? lead?.clientName : invoice?.client?.firstName}`,
       vehicle: vehicleInfo
         ? `${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}`
         : '',
