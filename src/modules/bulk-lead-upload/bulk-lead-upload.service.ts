@@ -55,7 +55,7 @@ export class BulkLeadUploadService {
       for (const row of data) {
         // Parse the data based on expected columns
         const lead: LeadRowDto = {
-          name: row['name'] || row['Name'] || '',
+          name: row['name'] || row['Name'] || row['full_name'] || '',
           email: row['email'] || row['Email'] || '',
           contact: String(row['contact'] || row['Contact'] || ''),
           vehicle: row['vehicle(year make model)'] || row['vehicle(year-make-model)'] || row['vehicle'] || row['Vehicle'] || '',
