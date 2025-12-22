@@ -387,6 +387,7 @@ model Client {
   firstName              String                   @map("first_name")
   lastName               String?                  @map("last_name")
   mobile                 String?
+  countryCode            String?                  @map("country_code") @default("US")
   email                  String?
   address                String?
   city                   String?
@@ -495,6 +496,7 @@ model Company {
   businessId                       String?                            @map("business_id")
   businessType                     String?                            @map("business_type")
   phone                            String?
+  countryCode            String?                                      @map("country_code") @default("US")
   email                            String?
   industry                         String?
   website                          String?
@@ -659,6 +661,7 @@ model Lead {
   clientName          String     @map("client_name")
   clientEmail         String?    @map("client_email")
   clientPhone         String?    @map("client_phone")
+  countryCode         String?    @map("country_code") @default("US")
   vehicleInfo         String     @map("vehicle_info")
   vehicleId           Int?
   services            String
@@ -994,6 +997,7 @@ model Vendor {
   website                 String?
   email                   String?
   phone                   String?
+  countryCode             String?                  @map("country_code") @default("US")
   address                 String?
   city                    String?
   state                   String?
@@ -1858,6 +1862,7 @@ model User {
   provider          Provider           @default(email)
   timezone          String             @default("UTC")
   phone             String?
+  countryCode       String?            @map("country_code") @default("US")
   address           String?
   city              String?
   state             String?
