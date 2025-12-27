@@ -17,6 +17,8 @@ import { TagAutomationTriggerService } from '../services/tag-automation-trigger.
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PipelineAutomationTriggerService } from 'src/modules/automations/pipeline-automation/pipeline-automation-trigger/services/pipeline-automation-trigger.service';
 import { ServiceAutomationTriggerService } from 'src/modules/automations/service-automation/service-automation-trigger/services/service-automation-trigger.service';
+import { CommunicationAutomationTriggerService } from 'src/modules/automations/communication-automation/communication-automation-trigger/communication-automation-trigger.service';
+import { InvoiceAutomationTriggerService } from 'src/modules/automations/invoice-automation/invoice-automation-trigger/services/invoice-automation-trigger.service';
 
 @Processor('tag-time-delay')
 export class TagTimeDelayProcessor {
@@ -32,7 +34,9 @@ export class TagTimeDelayProcessor {
     private readonly timeDelayQueue: Queue,
     private readonly tagAutomationTriggerService: TagAutomationTriggerService,
     private readonly pipelineAutomationTriggerService: PipelineAutomationTriggerService,
+    private readonly communicationAutomationTriggerService: CommunicationAutomationTriggerService,
     private readonly serviceMaintenanceAutomationTriggerService: ServiceAutomationTriggerService,
+    private readonly invoiceAutomationTriggerService: InvoiceAutomationTriggerService,
   ) {}
   private readonly logger = new Logger(TagTimeDelayProcessor.name);
 
@@ -73,6 +77,13 @@ export class TagTimeDelayProcessor {
           estimateId: updatedInvoice?.id,
         });
 
+        await this.invoiceAutomationTriggerService.update({
+          columnId: updatedInvoice.columnId!,
+          companyId,
+          invoiceId: updatedInvoice?.id,
+          type: updatedInvoice.type,
+        });
+
         this.logger.log(
           `Pipeline automation (SHOP) executed for invoice ${invoiceId}`,
         );
@@ -99,6 +110,12 @@ export class TagTimeDelayProcessor {
           pipelineType: 'SALES',
           leadId,
           conditionType: 'post_tag',
+        });
+
+        await this.communicationAutomationTriggerService.update({
+          columnId: updatedLead.columnId!,
+          companyId,
+          leadId,
         });
 
         await this.pipelineAutomationTriggerService.update({

@@ -9,6 +9,8 @@ import { GlobalRepository } from 'src/shared/global-service/repository/global.re
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ServiceAutomationTriggerModule } from '../../service-automation/service-automation-trigger/service-automation-trigger.module';
 import { PipelineAutomationTriggerModule } from '../../pipeline-automation/pipeline-automation-trigger/pipeline-automation-trigger.module';
+import { CommunicationAutomationTriggerModule } from '../../communication-automation/communication-automation-trigger/communication-automation-trigger.module';
+import { InvoiceAutomationTriggerModule } from '../../invoice-automation/invoice-automation-trigger/invoice-automation-trigger.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { PipelineAutomationTriggerModule } from '../../pipeline-automation/pipel
       },
     }),
     forwardRef(() => PipelineAutomationTriggerModule),
+    forwardRef(() => CommunicationAutomationTriggerModule),
+    forwardRef(() => InvoiceAutomationTriggerModule),
     forwardRef(() => ServiceAutomationTriggerModule),
   ],
   controllers: [TagAutomationTriggerController],
