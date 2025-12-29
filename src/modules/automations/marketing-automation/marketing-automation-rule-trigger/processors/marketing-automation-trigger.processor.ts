@@ -80,6 +80,10 @@ export class MarketingAutomationProcessor {
       marketingRule.emailBody || '',
       placeholdersValue,
     );
+    const formattedEmailSubject = this.mailUtils.formatBody(
+      marketingRule.emailSubject || '',
+      placeholdersValue,
+    );
 
     const formattedSmsBody = this.mailUtils.formatBody(
       marketingRule.smsBody || '',
@@ -94,7 +98,7 @@ export class MarketingAutomationProcessor {
         // Send email only if the client has an email address
         if (client.email) {
           await this.mailService.sendEmail({
-            subject: marketingRule.emailSubject! || '',
+            subject: formattedEmailSubject,
             clientEmail: client.email,
             emailBody: formattedEmailBody,
             companyEmail: client.company?.email || '',
