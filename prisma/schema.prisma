@@ -634,6 +634,7 @@ model Company {
   permissions                      Permission[]
   Lead                             Lead[]
   isCRMEnabled                     Boolean?                           @default(false) @map("is_crm_enabled")
+  isCollaborators                  Boolean?                           @default(false) @map("is_collaborators")
   LeaveRequest                     LeaveRequest[]
   RequestEstimateSent              RequestEstimate[]                  @relation("SenderCompany")
   RequestEstimateReceived          RequestEstimate[]                  @relation("ReceiverCompany")
@@ -677,13 +678,20 @@ enum SmsGateway {
 
 // create model that will handle multiple companies join and collaboration
 model CompanyJoin {
-  id           Int      @id @default(autoincrement())
+  id           Int               @id @default(autoincrement())
   companyOneId Int
   companyTwoId Int
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
-  companyOne   Company  @relation(fields: [companyOneId], references: [id], onDelete: Cascade, name: "CompanyOne")
-  companyTwo   Company  @relation(fields: [companyTwoId], references: [id], onDelete: Cascade, name: "CompanyTwo")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at")
+  companyOne   Company           @relation(fields: [companyOneId], references: [id], onDelete: Cascade, name: "CompanyOne")
+  companyTwo   Company           @relation(fields: [companyTwoId], references: [id], onDelete: Cascade, name: "CompanyTwo")
+  status       CompanyJoinStatus @default(ACCEPTED)
+}
+
+enum CompanyJoinStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 
 // Calendar settings for a company.
@@ -1155,7 +1163,7 @@ model Service {
   createdAt               DateTime                  @default(now()) @map("created_at")
   updatedAt               DateTime                  @default(now()) @updatedAt @map("updated_at")
   name                    String
-  description             String?
+  description             String?                   @db.Text
   canned                  Boolean?                  @default(false)
   fromRequest             Boolean?                  @default(false) @map("from_request")
   fromRequestedCompanyId  Int?                      @map("from_requested_company_id")
@@ -1346,6 +1354,7 @@ model Invoice {
   vehicleParts            VehicleParts[]
   photos                  InvoicePhoto[]
   signatureImage          String?
+  wasAuthorized           Boolean                   @default(false)
   tasks                   Task[]
   status                  Status?                   @relation(fields: [statusId], references: [id])
   payments                Payment[]
@@ -1369,6 +1378,7 @@ model Invoice {
   TimeDelayExecution      TimeDelayExecution[]
   Refund                  Refund[]
   FleetStatement          FleetStatement?           @relation(fields: [fleetStatementId], references: [id])
+  isViewed                Boolean?                  @default(false) @map("is_viewed")
 
   @@index([companyId], name: "fk_invoices_company")
   @@index([companyId, type])
@@ -1689,6 +1699,7 @@ enum NotificationType {
   CLIENT_CALL_ALERT
   CLIENT_EMAIL_ALERT
   COLLABORATION_MESSAGE_ALERT
+  COLLABORATION_INVITATION
 }
 
 enum NotificationSection {
