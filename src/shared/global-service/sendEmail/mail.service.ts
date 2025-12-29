@@ -75,14 +75,14 @@ export class MailService {
         subject || `New message from ${companyName || companyEmail}`,
       );
       form.append('text', emailBody || '');
-      
+
       // If the emailBody contains HTML tags (like <br>), also send as HTML
       if (emailBody && emailBody.includes('<br>')) {
         form.append('html', emailBody);
       }
 
       // Set reply-to for routing replies back to your system
-      form.append('replyTo', `${companyId}@${infobipDomain}`);
+      form.append('replyTo', `${companyId}@ib79097.${infobipDomain}`);
 
       // Add custom headers as JSON (Infobip v3 format)
       const customHeaders: Record<string, string | string[]> = {};
