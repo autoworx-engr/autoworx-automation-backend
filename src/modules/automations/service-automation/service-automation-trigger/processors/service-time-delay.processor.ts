@@ -127,6 +127,10 @@ export class ServiceTimeDelayProcessor {
         rule.emailBody || '',
         placeholdersValue,
       );
+      const formattedEmailSubject = this.mailUtils.formatBody(
+        rule.emailSubject || '',
+        placeholdersValue,
+      );
 
       const formattedSmsBody = this.mailUtils.formatBody(
         rule.smsBody || '',
@@ -139,7 +143,7 @@ export class ServiceTimeDelayProcessor {
 
       if (rule.emailBody && rule.emailSubject && estimate.client.email) {
         await this.mailService.sendEmail({
-          subject: rule.emailSubject || '',
+          subject: formattedEmailSubject,
           clientEmail: estimate.client.email || '',
           emailBody: formattedEmailBody,
           companyEmail: companyInfo?.email || '',

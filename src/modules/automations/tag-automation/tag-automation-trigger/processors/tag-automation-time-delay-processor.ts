@@ -331,6 +331,10 @@ export class TagTimeDelayProcessor {
       (rule?.tagAutomationCommunication?.emailBody as string) || '',
       placeholdersValue,
     );
+    const formattedEmailSubject = this.mailUtils.formatBody(
+      (rule?.tagAutomationCommunication?.subject as string) || '',
+      placeholdersValue,
+    );
 
     const formattedSmsBody = this.mailUtils.formatBody(
       (rule?.tagAutomationCommunication?.smsBody as string) || '',
@@ -346,7 +350,7 @@ export class TagTimeDelayProcessor {
       rule?.tagAutomationCommunication?.communicationType === 'BOTH'
     ) {
       await this.mailService.sendEmail({
-        subject: rule?.tagAutomationCommunication?.subject || '',
+        subject: formattedEmailSubject,
         clientEmail:
           rule.pipelineType === 'SALES'
             ? lead.clientEmail!

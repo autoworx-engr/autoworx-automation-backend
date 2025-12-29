@@ -213,6 +213,10 @@ export class CommunicationTimeDelayProcessor {
       rule.emailBody || '',
       placeholdersValue,
     );
+    const formattedEmailSubject = this.mailUtils.formatBody(
+      rule.subject || '',
+      placeholdersValue,
+    );
 
     const formattedSmsBody = this.mailUtils.formatBody(
       rule.smsBody || '',
@@ -228,7 +232,7 @@ export class CommunicationTimeDelayProcessor {
       rule.communicationType === 'BOTH'
     ) {
       await this.mailService.sendEmail({
-        subject: rule.subject || '',
+        subject: formattedEmailSubject,
         clientEmail: lead.clientEmail || '',
         emailBody: formattedEmailBody,
         companyEmail: companyInfo?.email || '',
