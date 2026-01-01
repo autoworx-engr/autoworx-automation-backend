@@ -121,6 +121,7 @@ export class ServiceTimeDelayProcessor {
         businessAddress: companyInfo?.address || '',
         videoDirection: 'N/A',
         googleMapLink: 'N/A',
+        googleReviewLink: companyInfo?.googleReviewLink || 'N/A',
       };
 
       const formattedEmailBody = this.mailUtils.formatBody(

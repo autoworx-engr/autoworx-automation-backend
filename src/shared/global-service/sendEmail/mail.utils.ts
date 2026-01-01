@@ -14,7 +14,7 @@ export type TPlaceholder = {
   phone?: string;
   service?: string;
   date?: string | Date;
-  reviewLink?: string;
+  googleReviewLink?: string;
   contact?: string;
   interest?: string;
   videoDirection?: string;
@@ -37,7 +37,7 @@ export class MailUtils {
       // ADDRESS: placeholdersValue?.address,
       CLIENT: placeholdersValue?.client,
       DATE: placeholdersValue?.date,
-      REVIEW_LINK: placeholdersValue?.reviewLink,
+      GOOGLE_REVIEW_LINK: placeholdersValue?.googleReviewLink,
       SERVICE: placeholdersValue?.service,
       // PHONE: placeholdersValue?.phone,
       CONTACT: placeholdersValue?.contact,
