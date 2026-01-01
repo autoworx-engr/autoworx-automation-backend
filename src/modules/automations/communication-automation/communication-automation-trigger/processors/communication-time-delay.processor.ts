@@ -207,6 +207,7 @@ export class CommunicationTimeDelayProcessor {
       businessAddress: companyInfo?.address || '',
       videoDirection: 'N/A',
       googleMapLink: 'N/A',
+      googleReviewLink: companyInfo?.googleReviewLink || 'N/A',
     };
     // send email for column change
     const formattedEmailBody = this.mailUtils.formatBody(
