@@ -310,6 +310,7 @@ export class TagTimeDelayProcessor {
           address: true,
           email: true,
           smsGateway: true,
+          googleReviewLink: true,
         },
       },
     );

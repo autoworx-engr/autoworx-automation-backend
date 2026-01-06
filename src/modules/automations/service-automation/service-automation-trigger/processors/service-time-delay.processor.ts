@@ -96,6 +96,7 @@ export class ServiceTimeDelayProcessor {
             address: true,
             email: true,
             smsGateway: true,
+            googleReviewLink: true,
           },
         },
       );
