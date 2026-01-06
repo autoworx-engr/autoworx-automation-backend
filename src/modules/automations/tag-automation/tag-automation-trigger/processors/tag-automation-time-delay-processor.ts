@@ -309,7 +309,7 @@ export class TagTimeDelayProcessor {
           phone: true,
           address: true,
           email: true,
-          smsGateway: true,
+          googleReviewLink: true,
         },
       },
     );

@@ -193,6 +193,7 @@ export class CommunicationTimeDelayProcessor {
         address: true,
         email: true,
         smsGateway: true,
+        googleReviewLink: true,
       },
     });
 
