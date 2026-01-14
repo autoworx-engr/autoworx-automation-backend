@@ -1,13 +1,11 @@
-import { Body, Controller, Patch, Logger, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ConditionType } from '@prisma/client';
+import { Body, Controller, Patch, Logger } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PipelineAutomationTriggerService } from '../services/pipeline-automation-trigger.service';
 import { UpdatePipelineAutomationTriggerDto } from '../dto/update-pipeline-automation-trigger.dto';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 
 @ApiTags('Pipeline Automation Trigger')
-@ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
+// @ApiBearerAuth('JWT-auth')
+// @UseGuards(JwtAuthGuard)
 @Controller('pipeline-automation-trigger')
 export class PipelineAutomationTriggerController {
   private readonly logger = new Logger(
