@@ -1,10 +1,9 @@
-import { Controller, Get, Query, Logger, UseGuards } from '@nestjs/common';
+import { Controller, Get, Logger, Param, Query } from '@nestjs/common';
 import { CarApiService } from './car-api.service';
+import { VinDecoderDto } from './dto/vindecoder.dto';
 import { MakesQueryParams } from './interfaces/makes.interface';
 import { ModelsQueryParams } from './interfaces/models.interface';
 import { YearsQueryParams } from './interfaces/years.interface';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
-import { ApiBearerAuth } from '@nestjs/swagger';
 
 // @ApiBearerAuth('JWT-auth')
 // @UseGuards(JwtAuthGuard)
@@ -27,5 +26,13 @@ export class CarApiController {
   @Get('years')
   async getYears(@Query() queryParams: YearsQueryParams) {
     return this.carApiService.getYears(queryParams);
+  }
+
+  @Get('vin/:vin')
+  async getVinDecoder(
+    @Param('vin') vin: string,
+    @Query() queryParams: VinDecoderDto,
+  ) {
+    return this.carApiService.getVinDecoder(vin, queryParams);
   }
 }

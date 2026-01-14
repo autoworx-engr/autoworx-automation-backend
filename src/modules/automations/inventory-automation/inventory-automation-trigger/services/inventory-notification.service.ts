@@ -60,8 +60,10 @@ export class InventoryNotificationService {
           description: 'Inventory stock alert details PDF',
           companyId: notificationData.companyId,
         });
-        
-        const finalUrl = shortLinkResult.success ? shortLinkResult.shortUrl : pdfUrl;
+
+        const finalUrl = shortLinkResult.success
+          ? shortLinkResult.shortUrl
+          : pdfUrl;
         const smsMessage = `You are running out of stocks. View full details: ${finalUrl}`;
         await this.queueSmsNotifications(
           recipients,
@@ -79,10 +81,12 @@ export class InventoryNotificationService {
           description: 'Inventory stock alert details PDF',
           companyId: notificationData.companyId,
         });
-        
-        const finalUrl = shortLinkResult.success ? shortLinkResult.shortUrl : pdfUrl;
+
+        const finalUrl = shortLinkResult.success
+          ? shortLinkResult.shortUrl
+          : pdfUrl;
         const smsMessage = `You are running out of stocks. View full details: ${finalUrl}`;
-        
+
         await Promise.all([
           this.queueEmailNotifications(
             recipients,

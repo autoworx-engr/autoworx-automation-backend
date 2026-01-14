@@ -1,17 +1,11 @@
-import { Body, Controller, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Patch } from '@nestjs/common';
 import { CommunicationAutomationTriggerService } from './communication-automation-trigger.service';
 import { UpdateCommunicationAutomationTriggerDto } from './dto/update-communication-automation-trigger.dto';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('communication-automation-trigger')
-@ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
+// @ApiBearerAuth('JWT-auth')
+// @UseGuards(JwtAuthGuard)
 @Controller('communication-automation-trigger')
 export class CommunicationAutomationTriggerController {
   constructor(

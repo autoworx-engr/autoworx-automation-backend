@@ -6,6 +6,7 @@ import { CommunicationAutomationTriggerService } from './communication-automatio
 import { CommunicationTimeDelayProcessor } from './processors/communication-time-delay.processor';
 import { CommunicationAutomationTriggerRepository } from './repository/communication-automation-trigger.repository';
 import { CommunicationAutomationModule } from '../communication-automation-rule/communication-automation.module';
+import { TagAutomationTriggerModule } from '../../tag-automation/tag-automation-trigger/tag-automation-trigger.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CommunicationAutomationModule } from '../communication-automation-rule/
     }),
     forwardRef(() => PipelineAutomationTriggerModule),
     forwardRef(() => CommunicationAutomationModule),
+    TagAutomationTriggerModule,
   ],
   controllers: [CommunicationAutomationTriggerController],
   providers: [

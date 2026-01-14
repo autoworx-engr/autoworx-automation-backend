@@ -53,6 +53,7 @@ export class MarketingAutomationProcessor {
           address: true,
           email: true,
           smsGateway: true,
+          googleReviewLink: true,
         },
       },
     );
@@ -65,6 +66,7 @@ export class MarketingAutomationProcessor {
 
     const placeholdersValue: TPlaceholder = {
       contactName: `${client.firstName} ${client.lastName}`,
+      client: `${client.firstName} ${client.lastName}`,
       vehicle: vehicleInfo
         ? `${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}`
         : '',
@@ -73,10 +75,15 @@ export class MarketingAutomationProcessor {
       businessAddress: companyInfo?.address || '',
       videoDirection: 'N/A',
       googleMapLink: 'N/A',
+      googleReviewLink: companyInfo?.googleReviewLink || 'N/A',
     };
 
     const formattedEmailBody = this.mailUtils.formatBody(
       marketingRule.emailBody || '',
+      placeholdersValue,
+    );
+    const formattedEmailSubject = this.mailUtils.formatBody(
+      marketingRule.emailSubject || '',
       placeholdersValue,
     );
 
@@ -93,7 +100,7 @@ export class MarketingAutomationProcessor {
         // Send email only if the client has an email address
         if (client.email) {
           await this.mailService.sendEmail({
-            subject: marketingRule.emailSubject! || '',
+            subject: formattedEmailSubject,
             clientEmail: client.email,
             emailBody: formattedEmailBody,
             companyEmail: client.company?.email || '',

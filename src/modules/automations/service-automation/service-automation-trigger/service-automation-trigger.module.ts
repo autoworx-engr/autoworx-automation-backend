@@ -1,9 +1,10 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ServiceAutomationTriggerRepository } from './repository/service-automation-trigger.repository';
 import { BullModule } from '@nestjs/bull';
 import { ServiceTimeDelayProcessor } from './processors/service-time-delay.processor';
 import { ServiceAutomationTriggerController } from './controllers/service-automation-trigger.controller';
 import { ServiceAutomationTriggerService } from './services/service-automation-trigger.service';
+import { TagAutomationTriggerModule } from '../../tag-automation/tag-automation-trigger/tag-automation-trigger.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ServiceAutomationTriggerService } from './services/service-automation-t
         removeOnFail: false,
       },
     }),
+    forwardRef(() => TagAutomationTriggerModule),
   ],
   controllers: [ServiceAutomationTriggerController],
   providers: [
@@ -22,5 +24,6 @@ import { ServiceAutomationTriggerService } from './services/service-automation-t
     ServiceAutomationTriggerService,
     ServiceTimeDelayProcessor,
   ],
+  exports: [ServiceAutomationTriggerService],
 })
 export class ServiceAutomationTriggerModule {}

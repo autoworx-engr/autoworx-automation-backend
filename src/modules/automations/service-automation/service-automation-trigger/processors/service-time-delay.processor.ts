@@ -13,11 +13,13 @@ import { SmsService } from 'src/shared/global-service/sendSms/sms.service';
 import { InfobipSmsService } from 'src/shared/global-service/sendInfobipSms/infobip-sms.service';
 import { IServiceAutomationTrigger } from '../interfaces/service-automation-trigger.interface';
 import { isValidUSMobile } from 'src/shared/global-service/utils/isValidUSMobile';
+import { TagAutomationTriggerService } from 'src/modules/automations/tag-automation/tag-automation-trigger/services/tag-automation-trigger.service';
 
 @Processor('service-time-delay')
 export class ServiceTimeDelayProcessor {
   constructor(
     private readonly serviceAutomationRepository: ServiceAutomationTriggerRepository,
+    private readonly tagAutomationTriggerService: TagAutomationTriggerService,
     private readonly globalRepository: GlobalRepository,
     private readonly mailUtils: MailUtils,
     private readonly smsService: SmsService,
@@ -94,6 +96,7 @@ export class ServiceTimeDelayProcessor {
             address: true,
             email: true,
             smsGateway: true,
+            googleReviewLink: true,
           },
         },
       );
@@ -109,6 +112,7 @@ export class ServiceTimeDelayProcessor {
 
       const placeholdersValue: TPlaceholder = {
         contactName: `${estimate.client.firstName} ${estimate.client.lastName}`,
+        client: `${estimate.client.firstName} ${estimate.client.lastName}`,
         interest: 'N/A',
         vehicle: vehicleInfo
           ? `${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}`
@@ -118,10 +122,15 @@ export class ServiceTimeDelayProcessor {
         businessAddress: companyInfo?.address || '',
         videoDirection: 'N/A',
         googleMapLink: 'N/A',
+        googleReviewLink: companyInfo?.googleReviewLink || 'N/A',
       };
 
       const formattedEmailBody = this.mailUtils.formatBody(
         rule.emailBody || '',
+        placeholdersValue,
+      );
+      const formattedEmailSubject = this.mailUtils.formatBody(
+        rule.emailSubject || '',
         placeholdersValue,
       );
 
@@ -136,7 +145,7 @@ export class ServiceTimeDelayProcessor {
 
       if (rule.emailBody && rule.emailSubject && estimate.client.email) {
         await this.mailService.sendEmail({
-          subject: rule.emailSubject || '',
+          subject: formattedEmailSubject,
           clientEmail: estimate.client.email || '',
           emailBody: formattedEmailBody,
           companyEmail: companyInfo?.email || '',
@@ -182,11 +191,22 @@ export class ServiceTimeDelayProcessor {
         );
       }
       if (rule.targetColumnId) {
-        await this.globalRepository.updateEstimateColumn({
-          companyId,
-          estimateId,
-          targetedColumnId: rule.targetColumnId,
-        });
+        const updatedEstimate =
+          await this.globalRepository.updateEstimateColumn({
+            companyId,
+            estimateId,
+            targetedColumnId: rule.targetColumnId,
+          });
+
+        if (updatedEstimate) {
+          await this.tagAutomationTriggerService.update({
+            columnId: updatedEstimate.columnId!,
+            companyId,
+            pipelineType: 'SHOP',
+            invoiceId: estimateId,
+            conditionType: 'post_tag',
+          });
+        }
 
         this.logger.log(
           `Estimate ${estimateId} moved to column ${rule.targetColumnId} successfully`,

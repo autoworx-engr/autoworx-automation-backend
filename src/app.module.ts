@@ -10,7 +10,9 @@ import { Keyv } from 'keyv';
 import configuration from 'src/config/configuration';
 import { CarApiModule } from './external/car-api/car-api.module';
 import { AdminPermissionModule } from './modules/admin-module-permission/admin-permission.module';
+import { ReminderModule } from './modules/appointment-reminder-module/reminder.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AutoClockOutModule } from './modules/auto-clockout/auto-clockout.module';
 import { CommunicationAutomationModule } from './modules/automations/communication-automation/communication-automation-rule/communication-automation.module';
 import { CommunicationAutomationTriggerModule } from './modules/automations/communication-automation/communication-automation-trigger/communication-automation-trigger.module';
 import { InventoryAutomationModule } from './modules/automations/inventory-automation/inventory-automation.module';
@@ -19,12 +21,11 @@ import { InvoiceAutomationTriggerModule } from './modules/automations/invoice-au
 import { MarketingAutomationModule } from './modules/automations/marketing-automation/marketing-automation.module';
 import { PipelineAutomationModule } from './modules/automations/pipeline-automation/pipeline-automation.module';
 import { ServiceAutomationModule } from './modules/automations/service-automation/service-automation.module';
+import { TagAutomationModule } from './modules/automations/tag-automation/tag-automation.module';
+import { NotificationModule } from './modules/notification/notification.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { GlobalModule } from './shared/global-service/global.module';
 
-import { ReminderModule } from './modules/appointment-reminder-module/reminder.module';
-import { NotificationModule } from './modules/notification/notification.module';
-import { BulkLeadUploadModule } from './modules/bulk-lead-upload/bulk-lead-upload.module';
 @Global()
 @Module({
   imports: [
@@ -138,7 +139,8 @@ import { BulkLeadUploadModule } from './modules/bulk-lead-upload/bulk-lead-uploa
     AdminPermissionModule,
     ReminderModule,
     NotificationModule,
-    BulkLeadUploadModule,
+    AutoClockOutModule,
+    TagAutomationModule,
   ],
   controllers: [],
   providers: [],

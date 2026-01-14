@@ -69,6 +69,8 @@ export class InvoiceTimeDelayProcessor {
             phone: true,
             address: true,
             email: true,
+            smsGateway: true,
+            googleReviewLink: true,
           },
         },
       );
@@ -87,13 +89,19 @@ export class InvoiceTimeDelayProcessor {
         client: invoice.client?.firstName + ' ' + invoice.client?.lastName,
         businessName: companyInfo?.name,
         date: invoice.createdAt,
-        reviewLink: 'N/A',
         service: serviceItems,
         phone: invoice.client?.mobile || '',
+        videoDirection: 'N/A',
+        googleMapLink: 'N/A',
+        googleReviewLink: companyInfo?.googleReviewLink || 'N/A',
       };
       // send email for column change
       const formattedEmailBody = this.mailUtils.formatBody(
         rule.emailBody || '',
+        placeholdersValue,
+      );
+      const formattedEmailSubject = this.mailUtils.formatBody(
+        rule.emailSubject || '',
         placeholdersValue,
       );
 
@@ -111,7 +119,7 @@ export class InvoiceTimeDelayProcessor {
         rule.communicationType === 'BOTH'
       ) {
         await this.mailService.sendEmail({
-          subject: rule.emailSubject || '',
+          subject: formattedEmailSubject,
           clientEmail: invoice.client?.email || '',
           emailBody: formattedEmailBody,
           companyEmail: companyInfo?.email || '',
