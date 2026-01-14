@@ -13,6 +13,7 @@ import { AdminPermissionModule } from './modules/admin-module-permission/admin-p
 import { ReminderModule } from './modules/appointment-reminder-module/reminder.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AutoClockOutModule } from './modules/auto-clockout/auto-clockout.module';
+import { BulkUploadModule } from './modules/bulk-upload/bulk-upload.module';
 import { CommunicationAutomationModule } from './modules/automations/communication-automation/communication-automation-rule/communication-automation.module';
 import { CommunicationAutomationTriggerModule } from './modules/automations/communication-automation/communication-automation-trigger/communication-automation-trigger.module';
 import { InventoryAutomationModule } from './modules/automations/inventory-automation/inventory-automation.module';
@@ -141,6 +142,7 @@ import { GlobalModule } from './shared/global-service/global.module';
     NotificationModule,
     AutoClockOutModule,
     TagAutomationModule,
+    BulkUploadModule,
   ],
   controllers: [],
   providers: [],
