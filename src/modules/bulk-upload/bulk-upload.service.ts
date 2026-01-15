@@ -1,10 +1,12 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import * as XLSX from 'xlsx';
 import { BulkUploadProcessorFactory } from './factories/bulk-upload-processor.factory';
 import { BulkUploadDto, RowData, ProcessingResult } from './dto/bulk-upload.dto';
 
 @Injectable()
 export class BulkUploadService {
+  private readonly logger = new Logger(BulkUploadService.name);
+
   constructor(
     private readonly processorFactory: BulkUploadProcessorFactory,
   ) {}
@@ -20,8 +22,11 @@ export class BulkUploadService {
     uploadDto: BulkUploadDto,
   ): Promise<ProcessingResult> {
     try {
+      this.logger.log(`Processing bulk upload - companyId: ${uploadDto.companyId}, type: ${uploadDto.type}`);
+      
       // Parse the file
       const data = this.parseFile(file);
+      this.logger.log(`Parsed ${data.length} rows from file`);
 
       // Validate that we have data
       if (data.length === 0) {
@@ -30,12 +35,15 @@ export class BulkUploadService {
 
       // Get the appropriate processor based on type
       const processor = this.processorFactory.getProcessor(uploadDto.type);
+      this.logger.log(`Using processor for type: ${uploadDto.type}`);
 
       // Process the data
       const result = await processor.process(data, uploadDto.companyId);
+      this.logger.log(`Processing complete - Success: ${result.successfulRows}, Failed: ${result.failedRows}`);
 
       return result;
     } catch (error) {
+      this.logger.error(`Bulk upload processing error: ${error.message}`, error.stack);
       throw new BadRequestException(
         `Failed to process bulk upload: ${error.message}`,
       );

@@ -6,6 +6,7 @@ import {
   UseInterceptors,
   BadRequestException,
   ParseIntPipe,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiResponse } from '@nestjs/swagger';
@@ -15,6 +16,8 @@ import { BulkUploadDto, ProcessingResult } from './dto/bulk-upload.dto';
 @ApiTags('Bulk Upload')
 @Controller('bulk-upload')
 export class BulkUploadController {
+  private readonly logger = new Logger(BulkUploadController.name);
+
   constructor(private readonly bulkUploadService: BulkUploadService) {}
 
   @Post()
@@ -74,26 +77,33 @@ export class BulkUploadController {
     @Body('companyId', ParseIntPipe) companyId: number,
     @Body('type') type: string,
   ): Promise<ProcessingResult> {
-    if (!file) {
-      throw new BadRequestException('File is required');
+    try {
+      this.logger.log(`Bulk upload request - companyId: ${companyId}, type: ${type}`);
+      
+      if (!file) {
+        throw new BadRequestException('File is required');
+      }
+      const allowedMimeTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/vnd.ms-excel', // .xls
+        'text/csv', // .csv
+      ];
+
+      if (!allowedMimeTypes.includes(file.mimetype)) {
+        throw new BadRequestException(
+          'Invalid file type. Only Excel (.xlsx, .xls) and CSV files are allowed',
+        );
+      }
+
+      const uploadDto: BulkUploadDto = {
+        companyId,
+        type: type as any,
+      };
+
+      return await this.bulkUploadService.processBulkUpload(file, uploadDto);
+    } catch (error) {
+      this.logger.error(`Bulk upload failed: ${error.message}`, error.stack);
+      throw error;
     }
-    const allowedMimeTypes = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-      'application/vnd.ms-excel', // .xls
-      'text/csv', // .csv
-    ];
-
-    if (!allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException(
-        'Invalid file type. Only Excel (.xlsx, .xls) and CSV files are allowed',
-      );
-    }
-
-    const uploadDto: BulkUploadDto = {
-      companyId,
-      type: type as any,
-    };
-
-    return this.bulkUploadService.processBulkUpload(file, uploadDto);
   }
 }
