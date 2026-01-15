@@ -9,6 +9,15 @@ export class LaborBulkUploadProcessor implements IBulkUploadProcessor {
   constructor(private readonly prisma: PrismaService) {}
 
   async process(data: RowData[], companyId: number): Promise<ProcessingResult> {
+    // Verify company exists
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+
+    if (!company) {
+      throw new Error('Company not found');
+    }
+
     const result: ProcessingResult = {
       totalRows: data.length,
       successfulRows: 0,
