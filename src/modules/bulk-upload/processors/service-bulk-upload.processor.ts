@@ -1,21 +1,28 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { IBulkUploadProcessor } from '../interfaces/bulk-upload-processor.interface';
 import { RowData, ProcessingResult } from '../dto/bulk-upload.dto';
 
 @Injectable()
 export class ServiceBulkUploadProcessor implements IBulkUploadProcessor {
+  private readonly logger = new Logger(ServiceBulkUploadProcessor.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async process(data: RowData[], companyId: number): Promise<ProcessingResult> {
+    this.logger.log(`Service bulk upload - checking company ${companyId}`);
+    
     // Verify company exists
     const company = await this.prisma.company.findUnique({
       where: { id: companyId },
     });
 
     if (!company) {
+      this.logger.error(`Company not found: ${companyId}`);
       throw new Error('Company not found');
     }
+    
+    this.logger.log(`Company ${companyId} verified, processing ${data.length} rows`);
 
     const result: ProcessingResult = {
       totalRows: data.length,
