@@ -26,6 +26,7 @@ import { TagAutomationModule } from './modules/automations/tag-automation/tag-au
 import { NotificationModule } from './modules/notification/notification.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { GlobalModule } from './shared/global-service/global.module';
+import { BulkLeadUploadModule } from './modules/bulk-lead-upload/bulk-lead-upload.module';
 
 @Global()
 @Module({
@@ -143,6 +144,7 @@ import { GlobalModule } from './shared/global-service/global.module';
     AutoClockOutModule,
     TagAutomationModule,
     BulkUploadModule,
+    BulkLeadUploadModule,
   ],
   controllers: [],
   providers: [],
