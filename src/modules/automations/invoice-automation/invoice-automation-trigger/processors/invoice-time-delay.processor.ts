@@ -70,6 +70,7 @@ export class InvoiceTimeDelayProcessor {
             address: true,
             email: true,
             smsGateway: true,
+            googleReviewLink: true,
           },
         },
       );
@@ -88,9 +89,11 @@ export class InvoiceTimeDelayProcessor {
         client: invoice.client?.firstName + ' ' + invoice.client?.lastName,
         businessName: companyInfo?.name,
         date: invoice.createdAt,
-        reviewLink: 'N/A',
         service: serviceItems,
         phone: invoice.client?.mobile || '',
+        videoDirection: 'N/A',
+        googleMapLink: 'N/A',
+        googleReviewLink: companyInfo?.googleReviewLink || 'N/A',
       };
       // send email for column change
       const formattedEmailBody = this.mailUtils.formatBody(

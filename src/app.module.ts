@@ -13,6 +13,7 @@ import { AdminPermissionModule } from './modules/admin-module-permission/admin-p
 import { ReminderModule } from './modules/appointment-reminder-module/reminder.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AutoClockOutModule } from './modules/auto-clockout/auto-clockout.module';
+import { BulkUploadModule } from './modules/bulk-upload/bulk-upload.module';
 import { CommunicationAutomationModule } from './modules/automations/communication-automation/communication-automation-rule/communication-automation.module';
 import { CommunicationAutomationTriggerModule } from './modules/automations/communication-automation/communication-automation-trigger/communication-automation-trigger.module';
 import { InventoryAutomationModule } from './modules/automations/inventory-automation/inventory-automation.module';
@@ -25,6 +26,7 @@ import { TagAutomationModule } from './modules/automations/tag-automation/tag-au
 import { NotificationModule } from './modules/notification/notification.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { GlobalModule } from './shared/global-service/global.module';
+import { BulkLeadUploadModule } from './modules/bulk-lead-upload/bulk-lead-upload.module';
 
 @Global()
 @Module({
@@ -141,6 +143,8 @@ import { GlobalModule } from './shared/global-service/global.module';
     NotificationModule,
     AutoClockOutModule,
     TagAutomationModule,
+    BulkUploadModule,
+    BulkLeadUploadModule,
   ],
   controllers: [],
   providers: [],

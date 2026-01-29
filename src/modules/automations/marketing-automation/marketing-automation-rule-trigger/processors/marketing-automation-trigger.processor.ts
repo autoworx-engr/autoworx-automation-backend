@@ -53,6 +53,7 @@ export class MarketingAutomationProcessor {
           address: true,
           email: true,
           smsGateway: true,
+          googleReviewLink: true,
         },
       },
     );
@@ -74,6 +75,7 @@ export class MarketingAutomationProcessor {
       businessAddress: companyInfo?.address || '',
       videoDirection: 'N/A',
       googleMapLink: 'N/A',
+      googleReviewLink: companyInfo?.googleReviewLink || 'N/A',
     };
 
     const formattedEmailBody = this.mailUtils.formatBody(
